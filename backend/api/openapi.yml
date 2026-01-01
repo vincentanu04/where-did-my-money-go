@@ -1,0 +1,78 @@
+openapi: 3.0.3
+info:
+  title: Expense Tracker API
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /expenses:
+    get:
+      summary: List expenses for a date
+      parameters:
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseList"
+    post:
+      summary: Create expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpenseRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+
+components:
+  schemas:
+    Expense:
+      type: object
+      required: [id, category, amount, date, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+        amount:
+          type: integer
+        date:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    ExpenseList:
+      type: array
+      items:
+        $ref: "#/components/schemas/Expense"
+
+    CreateExpenseRequest:
+      type: object
+      required: [category, amount, date]
+      properties:
+        category:
+          type: string
+        amount:
+          type: integer
+        date:
+          type: string
+          format: date
