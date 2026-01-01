@@ -1,11 +1,17 @@
-import { Button } from "@/components/ui/button"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import AppLayout from "@/layouts/AppLayout"
+import Home from "@/pages/Home"
+import History from "@/pages/History"
 
-function App() {
+export default function App() {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center">
-      <Button>Click me</Button>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/history" element={<History />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   )
 }
-
-export default App
