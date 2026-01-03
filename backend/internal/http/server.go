@@ -1,8 +1,7 @@
 package http
 
 import (
-	"encoding/json"
-	"net/http"
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,48 +14,45 @@ func NewServer() *Server {
 	return &Server{}
 }
 
-func (s *Server) GetExpenses(
-	w http.ResponseWriter,
-	r *http.Request,
-	params api.GetExpensesParams,
-) {
-	_ = params.Date // "2026-01-02"
+// (GET /expenses)
+func (s *Server) GetExpenses(ctx context.Context, request api.GetExpensesRequestObject) (api.GetExpensesResponseObject, error) {
+	_ = request.Params // "2026-01-02"
 
-	resp := []api.Expense{
+	return api.GetExpenses200JSONResponse([]api.Expense{
 		{
 			Id:       uuid.New(),
 			Category: "Food",
 			Amount:   400,
 			Date:     time.Now(),
 		},
-	}
-
-	json.NewEncoder(w).Encode(resp)
+		{
+			Id:       uuid.New(),
+			Category: "Transport",
+			Amount:   150,
+			Date:     time.Now(),
+		},
+	}), nil
 }
 
-func (s *Server) PostExpenses(w http.ResponseWriter, r *http.Request) {
-	var body api.CreateExpense
-	json.NewDecoder(r.Body).Decode(&body)
+// (POST /expenses)
+func (s *Server) PostExpenses(ctx context.Context, request api.PostExpensesRequestObject) (api.PostExpensesResponseObject, error) {
+	payload := request.Body
 
-	resp := api.Expense{
+	return api.PostExpenses201JSONResponse(api.Expense{
 		Id:       uuid.New(),
-		Category: body.Category,
-		Amount:   body.Amount,
-		Date:     body.Date,
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+		Category: payload.Category,
+		Amount:   payload.Amount,
+		Date:     payload.Date,
+	}), nil
 }
 
-func (s *Server) GetSummary(
-	w http.ResponseWriter,
-	r *http.Request,
-	params api.GetSummaryParams,
-) {
-	resp := []api.CategorySummary{
-		{Category: "Food", Total: 1200},
-	}
-
-	json.NewEncoder(w).Encode(resp)
+// (GET /summary)
+func (s *Server) GetSummary(ctx context.Context, request api.GetSummaryRequestObject) (api.GetSummaryResponseObject, error) {
+	return api.GetSummary200JSONResponse([]api.CategorySummary{
+		{
+			Total:    550,
+			Category: "s",
+		},
+	},
+	), nil
 }

@@ -4,19 +4,15 @@
 package api
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
-	"path"
-	"strings"
 	"time"
 
-	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
 	"github.com/oapi-codegen/runtime"
+	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -306,88 +302,178 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	return r
 }
 
-// Base64 encoded, gzipped, json marshaled Swagger object
-var swaggerSpec = []string{
-
-	"H4sIAAAAAAAC/9yV32vbMBDH/xVx26MXu+tL0dvWlVJYobCHPZQ8aPYlUbF16ulcZoL/9yHZbuIk7VYY",
-	"DPbmnO7H9z66U7ZQUuPJoZMAeguh3GBj0uelEVwTd9/apjHcRZNn8shiMTmUo0P8ls4jaAjC1q2hz0BI",
-	"TL13Yp3gGhn6PgPGx9YyVqDvd0mmkGU2hdCPBywlJrtkNIJXPz26gMdCTEOtk1PFstdFVkZSuhVxYwR0",
-	"MnwQ2yBkh94v6x7Lj+lO6f+3yjOw1cy3bW312waTyxu6jPHWrSjJtVLHs+8bZFRfbKVuO3VLDjt1TerT",
-	"3Q1k8IQcLDnQcLYoFkWUSR6d8RY0nC+KxTlk4I1sEqgcB4TpxxoTsgjSiCV3U4GGa5SryScGsmlQkAPo",
-	"+y3YWOexxdSJMw2OxGC/Z+EWs3EDjtie4LWMwcHTJOtjUaS1ICc4XKrxvrZl0pg/hNjsdi+/FWxS4HvG",
-	"FWh4l+92MR8XMZ9Gp3+ub5hNN/CuMJRsvQwcR1dV2yDpOsO0ufDVBlETQrUiVkalrvoMPIUTOO8o7POM",
-	"lDDIZ6q6N/X4Wmvzre7nAxgvoz8CfPbXis/KzjkOuqoDhINVGTdxTOd52L2OL43l9ID+R1N5+N/wB9M5",
-	"uiqPrJ6flQPEo1mNptmgJlfkpwleyzVo2Ih4nec1labeUBB9UVwU0C/7XwEAAP//Bgcc49kGAAA=",
+type GetExpensesRequestObject struct {
+	Params GetExpensesParams
 }
 
-// GetSwagger returns the content of the embedded swagger specification file
-// or error if failed to decode
-func decodeSpec() ([]byte, error) {
-	zipped, err := base64.StdEncoding.DecodeString(strings.Join(swaggerSpec, ""))
+type GetExpensesResponseObject interface {
+	VisitGetExpensesResponse(w http.ResponseWriter) error
+}
+
+type GetExpenses200JSONResponse []Expense
+
+func (response GetExpenses200JSONResponse) VisitGetExpensesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostExpensesRequestObject struct {
+	Body *PostExpensesJSONRequestBody
+}
+
+type PostExpensesResponseObject interface {
+	VisitPostExpensesResponse(w http.ResponseWriter) error
+}
+
+type PostExpenses201JSONResponse Expense
+
+func (response PostExpenses201JSONResponse) VisitPostExpensesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSummaryRequestObject struct {
+	Params GetSummaryParams
+}
+
+type GetSummaryResponseObject interface {
+	VisitGetSummaryResponse(w http.ResponseWriter) error
+}
+
+type GetSummary200JSONResponse []CategorySummary
+
+func (response GetSummary200JSONResponse) VisitGetSummaryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+// StrictServerInterface represents all server handlers.
+type StrictServerInterface interface {
+	// List expenses for a date
+	// (GET /expenses)
+	GetExpenses(ctx context.Context, request GetExpensesRequestObject) (GetExpensesResponseObject, error)
+	// Create an expense
+	// (POST /expenses)
+	PostExpenses(ctx context.Context, request PostExpensesRequestObject) (PostExpensesResponseObject, error)
+	// Category summary for a date
+	// (GET /summary)
+	GetSummary(ctx context.Context, request GetSummaryRequestObject) (GetSummaryResponseObject, error)
+}
+
+type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
+type StrictMiddlewareFunc = strictnethttp.StrictHTTPMiddlewareFunc
+
+type StrictHTTPServerOptions struct {
+	RequestErrorHandlerFunc  func(w http.ResponseWriter, r *http.Request, err error)
+	ResponseErrorHandlerFunc func(w http.ResponseWriter, r *http.Request, err error)
+}
+
+func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc) ServerInterface {
+	return &strictHandler{ssi: ssi, middlewares: middlewares, options: StrictHTTPServerOptions{
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		},
+		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		},
+	}}
+}
+
+func NewStrictHandlerWithOptions(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc, options StrictHTTPServerOptions) ServerInterface {
+	return &strictHandler{ssi: ssi, middlewares: middlewares, options: options}
+}
+
+type strictHandler struct {
+	ssi         StrictServerInterface
+	middlewares []StrictMiddlewareFunc
+	options     StrictHTTPServerOptions
+}
+
+// GetExpenses operation middleware
+func (sh *strictHandler) GetExpenses(w http.ResponseWriter, r *http.Request, params GetExpensesParams) {
+	var request GetExpensesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetExpenses(ctx, request.(GetExpensesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetExpenses")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
 	if err != nil {
-		return nil, fmt.Errorf("error base64 decoding spec: %w", err)
-	}
-	zr, err := gzip.NewReader(bytes.NewReader(zipped))
-	if err != nil {
-		return nil, fmt.Errorf("error decompressing spec: %w", err)
-	}
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(zr)
-	if err != nil {
-		return nil, fmt.Errorf("error decompressing spec: %w", err)
-	}
-
-	return buf.Bytes(), nil
-}
-
-var rawSpec = decodeSpecCached()
-
-// a naive cached of a decoded swagger spec
-func decodeSpecCached() func() ([]byte, error) {
-	data, err := decodeSpec()
-	return func() ([]byte, error) {
-		return data, err
-	}
-}
-
-// Constructs a synthetic filesystem for resolving external references when loading openapi specifications.
-func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) {
-	res := make(map[string]func() ([]byte, error))
-	if len(pathToFile) > 0 {
-		res[pathToFile] = rawSpec
-	}
-
-	return res
-}
-
-// GetSwagger returns the Swagger specification corresponding to the generated code
-// in this file. The external references of Swagger specification are resolved.
-// The logic of resolving external references is tightly connected to "import-mapping" feature.
-// Externally referenced files must be embedded in the corresponding golang packages.
-// Urls can be supported but this task was out of the scope.
-func GetSwagger() (swagger *openapi3.T, err error) {
-	resolvePath := PathToRawSpec("")
-
-	loader := openapi3.NewLoader()
-	loader.IsExternalRefsAllowed = true
-	loader.ReadFromURIFunc = func(loader *openapi3.Loader, url *url.URL) ([]byte, error) {
-		pathToFile := url.String()
-		pathToFile = path.Clean(pathToFile)
-		getSpec, ok := resolvePath[pathToFile]
-		if !ok {
-			err1 := fmt.Errorf("path not found: %s", pathToFile)
-			return nil, err1
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetExpensesResponseObject); ok {
+		if err := validResponse.VisitGetExpensesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
-		return getSpec()
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
 	}
-	var specData []byte
-	specData, err = rawSpec()
-	if err != nil {
+}
+
+// PostExpenses operation middleware
+func (sh *strictHandler) PostExpenses(w http.ResponseWriter, r *http.Request) {
+	var request PostExpensesRequestObject
+
+	var body PostExpensesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
 	}
-	swagger, err = loader.LoadFromData(specData)
-	if err != nil {
-		return
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostExpenses(ctx, request.(PostExpensesRequestObject))
 	}
-	return
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostExpenses")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostExpensesResponseObject); ok {
+		if err := validResponse.VisitPostExpensesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSummary operation middleware
+func (sh *strictHandler) GetSummary(w http.ResponseWriter, r *http.Request, params GetSummaryParams) {
+	var request GetSummaryRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSummary(ctx, request.(GetSummaryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSummary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSummaryResponseObject); ok {
+		if err := validResponse.VisitGetSummaryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
