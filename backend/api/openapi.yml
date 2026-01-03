@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: Expense Tracker API
-  version: 0.1.0
+  title: Where Did My Money Go API
+  version: 1.0.0
 
 servers:
   - url: http://localhost:8080
@@ -11,27 +11,29 @@ paths:
     get:
       summary: List expenses for a date
       parameters:
-        - in: query
-          name: date
+        - name: date
+          in: query
           required: true
           schema:
             type: string
             format: date
       responses:
         "200":
-          description: OK
+          description: Expense list
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ExpenseList"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
     post:
-      summary: Create expense
+      summary: Create an expense
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateExpenseRequest"
+              $ref: "#/components/schemas/CreateExpense"
       responses:
         "201":
           description: Created
@@ -39,12 +41,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Expense"
+  /summary:
+    get:
+      summary: Category summary for a date
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Summary per category
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategorySummary"
 
 components:
   schemas:
     Expense:
       type: object
-      required: [id, category, amount, date, createdAt]
+      required: [id, category, amount, date]
       properties:
         id:
           type: string
@@ -55,17 +76,8 @@ components:
           type: integer
         date:
           type: string
-          format: date
-        createdAt:
-          type: string
           format: date-time
-
-    ExpenseList:
-      type: array
-      items:
-        $ref: "#/components/schemas/Expense"
-
-    CreateExpenseRequest:
+    CreateExpense:
       type: object
       required: [category, amount, date]
       properties:
@@ -75,4 +87,12 @@ components:
           type: integer
         date:
           type: string
-          format: date
+          format: date-time
+    CategorySummary:
+      type: object
+      required: [category, total]
+      properties:
+        category:
+          type: string
+        total:
+          type: integer

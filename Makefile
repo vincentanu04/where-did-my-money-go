@@ -17,9 +17,7 @@ gen-go:
 
 ## Generate TypeScript client
 gen-ts:
-	cd frontend && bunx openapi-typescript \
-	  ../backend/api/openapi.yml \
-	  --output src/api/client.ts
+	cd frontend && bunx @rtk-query/codegen-openapi rtk-query.config.cjs
 
 ## Clean up go.mod
 tidy:

@@ -20,41 +20,51 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// CreateExpenseRequest defines model for CreateExpenseRequest.
-type CreateExpenseRequest struct {
-	Amount   int                `json:"amount"`
-	Category string             `json:"category"`
-	Date     openapi_types.Date `json:"date"`
+// CategorySummary defines model for CategorySummary.
+type CategorySummary struct {
+	Category string `json:"category"`
+	Total    int    `json:"total"`
+}
+
+// CreateExpense defines model for CreateExpense.
+type CreateExpense struct {
+	Amount   int       `json:"amount"`
+	Category string    `json:"category"`
+	Date     time.Time `json:"date"`
 }
 
 // Expense defines model for Expense.
 type Expense struct {
-	Amount    int                `json:"amount"`
-	Category  string             `json:"category"`
-	CreatedAt time.Time          `json:"createdAt"`
-	Date      openapi_types.Date `json:"date"`
-	Id        openapi_types.UUID `json:"id"`
+	Amount   int                `json:"amount"`
+	Category string             `json:"category"`
+	Date     time.Time          `json:"date"`
+	Id       openapi_types.UUID `json:"id"`
 }
-
-// ExpenseList defines model for ExpenseList.
-type ExpenseList = []Expense
 
 // GetExpensesParams defines parameters for GetExpenses.
 type GetExpensesParams struct {
 	Date openapi_types.Date `form:"date" json:"date"`
 }
 
+// GetSummaryParams defines parameters for GetSummary.
+type GetSummaryParams struct {
+	Date openapi_types.Date `form:"date" json:"date"`
+}
+
 // PostExpensesJSONRequestBody defines body for PostExpenses for application/json ContentType.
-type PostExpensesJSONRequestBody = CreateExpenseRequest
+type PostExpensesJSONRequestBody = CreateExpense
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List expenses for a date
 	// (GET /expenses)
 	GetExpenses(w http.ResponseWriter, r *http.Request, params GetExpensesParams)
-	// Create expense
+	// Create an expense
 	// (POST /expenses)
 	PostExpenses(w http.ResponseWriter, r *http.Request)
+	// Category summary for a date
+	// (GET /summary)
+	GetSummary(w http.ResponseWriter, r *http.Request, params GetSummaryParams)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -67,9 +77,15 @@ func (_ Unimplemented) GetExpenses(w http.ResponseWriter, r *http.Request, param
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create expense
+// Create an expense
 // (POST /expenses)
 func (_ Unimplemented) PostExpenses(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Category summary for a date
+// (GET /summary)
+func (_ Unimplemented) GetSummary(w http.ResponseWriter, r *http.Request, params GetSummaryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -121,6 +137,40 @@ func (siw *ServerInterfaceWrapper) PostExpenses(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostExpenses(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSummary operation middleware
+func (siw *ServerInterfaceWrapper) GetSummary(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSummaryParams
+
+	// ------------- Required query parameter "date" -------------
+
+	if paramValue := r.URL.Query().Get("date"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "date"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "date", r.URL.Query(), &params.Date)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSummary(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -249,6 +299,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/expenses", wrapper.PostExpenses)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/summary", wrapper.GetSummary)
+	})
 
 	return r
 }
@@ -256,15 +309,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/6yUv27bMBDGX0W4dlQtpVkCbmkRFEELNCi6BR5Y6mwzNXn08RTUMPTuBUkpdhK38eDJ",
-	"1v3jx9990g4MuUAevURQO4hmhU7nv58ZteDNn4A+4g/c9BglxQNTQBaLuUo76n2OyzYgKLBecIkMQw1G",
-	"Cy6JtwfZKGz9MiU7LZgSC2KnBVQJ1C8LhxoYN71l7EDd70fW08njpPlTJ/16QCPpiFH7GUWbzKS7llfK",
-	"P4h1R+SffM8abPesrO9t9yaOXPJPJod6/8Pnmy2LtYIu43nPuAAF75q9N5rRGM3EdHiap5n1FoYkzfoF",
-	"ZW5W1ik1Flc/WZvfyNX13S3U8IgcLXlQ0M4uZm0aRQG9DhYUXM7a2SXUELSsspgGy5D8sMSsNO1SiyV/",
-	"24GCLyg3U01qZO1QkCOo+x3YdM6mx4zHa4f7DexBCvdYj94/xZPz1BwDTbI+tm36MeQFi690CGtrssbm",
-	"IabL7g7mnwA4LyVD7TAatkEKsu9fswli75xOJoVUWE2MqgVxpasse6ghUDzC647iITAur/Yn6rZnu8TR",
-	"b8fw3L0J+vAK5MW5QR6DWOR1L0iW6MSy9EXkx8lKPa9BwUokqKZZk9HrFUVRV+1VC8N8+BsAAP//Q64O",
-	"cEsFAAA=",
+	"H4sIAAAAAAAC/9yV32vbMBDH/xVx26MXu+tL0dvWlVJYobCHPZQ8aPYlUbF16ulcZoL/9yHZbuIk7VYY",
+	"DPbmnO7H9z66U7ZQUuPJoZMAeguh3GBj0uelEVwTd9/apjHcRZNn8shiMTmUo0P8ls4jaAjC1q2hz0BI",
+	"TL13Yp3gGhn6PgPGx9YyVqDvd0mmkGU2hdCPBywlJrtkNIJXPz26gMdCTEOtk1PFstdFVkZSuhVxYwR0",
+	"MnwQ2yBkh94v6x7Lj+lO6f+3yjOw1cy3bW312waTyxu6jPHWrSjJtVLHs+8bZFRfbKVuO3VLDjt1TerT",
+	"3Q1k8IQcLDnQcLYoFkWUSR6d8RY0nC+KxTlk4I1sEqgcB4TpxxoTsgjSiCV3U4GGa5SryScGsmlQkAPo",
+	"+y3YWOexxdSJMw2OxGC/Z+EWs3EDjtie4LWMwcHTJOtjUaS1ICc4XKrxvrZl0pg/hNjsdi+/FWxS4HvG",
+	"FWh4l+92MR8XMZ9Gp3+ub5hNN/CuMJRsvQwcR1dV2yDpOsO0ufDVBlETQrUiVkalrvoMPIUTOO8o7POM",
+	"lDDIZ6q6N/X4Wmvzre7nAxgvoz8CfPbXis/KzjkOuqoDhINVGTdxTOd52L2OL43l9ID+R1N5+N/wB9M5",
+	"uiqPrJ6flQPEo1mNptmgJlfkpwleyzVo2Ih4nec1labeUBB9UVwU0C/7XwEAAP//Bgcc49kGAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
