@@ -6,6 +6,17 @@ const injectedRtkApi = api
   })
   .injectEndpoints({
     endpoints: (build) => ({
+      postAuthRegister: build.mutation<
+        PostAuthRegisterApiResponse,
+        PostAuthRegisterApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/auth/register`,
+          method: "POST",
+          body: queryArg.body,
+        }),
+        invalidatesTags: [],
+      }),
       postAuthLogin: build.mutation<
         PostAuthLoginApiResponse,
         PostAuthLoginApiArg
@@ -56,6 +67,13 @@ const injectedRtkApi = api
     overrideExisting: false,
   });
 export { injectedRtkApi as enhancedApi };
+export type PostAuthRegisterApiResponse = unknown;
+export type PostAuthRegisterApiArg = {
+  body: {
+    email: string;
+    password: string;
+  };
+};
 export type PostAuthLoginApiResponse = unknown;
 export type PostAuthLoginApiArg = {
   body: {
@@ -94,6 +112,7 @@ export type CategorySummary = {
   total: number;
 };
 export const {
+  usePostAuthRegisterMutation,
   usePostAuthLoginMutation,
   usePostAuthLogoutMutation,
   useGetExpensesQuery,

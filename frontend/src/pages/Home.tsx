@@ -1,10 +1,10 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DateHeader } from "@/components/DateHeader"
 import { CategoryGrid } from "@/components/CategoryGrid"
 import { AddExpenseModal } from "@/components/AddExpenseModal"
 import { FabHistory } from "@/components/FabHistory"
 import { useSelectedDate } from "@/hooks/useSelectedDate"
-import { useGetExpensesQuery, usePostExpensesMutation, type CreateExpense } from '@/api/client'
+import { useGetExpensesQuery, usePostAuthLoginMutation, usePostExpensesMutation, type CreateExpense } from '@/api/client'
 
 export default function Home() {
   const { date, prevDay, nextDay } = useSelectedDate();
@@ -12,6 +12,17 @@ export default function Home() {
   const { data: expensesData } = useGetExpensesQuery({
     date: date.toISOString().slice(0, 10),
   });
+
+  const [postLogin, _postLoginRes] =  usePostAuthLoginMutation();
+
+  useEffect(() => {
+    postLogin({
+      body: {
+        email: "edinende",
+        password: 'vincent123',
+      }
+    });
+  }, [postLogin]);
 
   const [postExpense, _postExpenseRes] =  usePostExpensesMutation();
   

@@ -43,6 +43,12 @@ type PostAuthLoginJSONBody struct {
 	Password string `json:"password"`
 }
 
+// PostAuthRegisterJSONBody defines parameters for PostAuthRegister.
+type PostAuthRegisterJSONBody struct {
+	Email    openapi_types.Email `json:"email"`
+	Password string              `json:"password"`
+}
+
 // GetExpensesParams defines parameters for GetExpenses.
 type GetExpensesParams struct {
 	Date openapi_types.Date `form:"date" json:"date"`
@@ -56,6 +62,9 @@ type GetSummaryParams struct {
 // PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
 type PostAuthLoginJSONRequestBody PostAuthLoginJSONBody
 
+// PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
+type PostAuthRegisterJSONRequestBody PostAuthRegisterJSONBody
+
 // PostExpensesJSONRequestBody defines body for PostExpenses for application/json ContentType.
 type PostExpensesJSONRequestBody = CreateExpense
 
@@ -67,6 +76,9 @@ type ServerInterface interface {
 
 	// (POST /auth/logout)
 	PostAuthLogout(w http.ResponseWriter, r *http.Request)
+	// Register a new user
+	// (POST /auth/register)
+	PostAuthRegister(w http.ResponseWriter, r *http.Request)
 	// List expenses for a date
 	// (GET /expenses)
 	GetExpenses(w http.ResponseWriter, r *http.Request, params GetExpensesParams)
@@ -89,6 +101,12 @@ func (_ Unimplemented) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 
 // (POST /auth/logout)
 func (_ Unimplemented) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Register a new user
+// (POST /auth/register)
+func (_ Unimplemented) PostAuthRegister(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -138,6 +156,20 @@ func (siw *ServerInterfaceWrapper) PostAuthLogout(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAuthLogout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthRegister operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthRegister(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthRegister(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -349,6 +381,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/expenses", wrapper.GetExpenses)
 	})
 	r.Group(func(r chi.Router) {
@@ -395,6 +430,30 @@ type PostAuthLogout204Response struct {
 
 func (response PostAuthLogout204Response) VisitPostAuthLogoutResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
+	return nil
+}
+
+type PostAuthRegisterRequestObject struct {
+	Body *PostAuthRegisterJSONRequestBody
+}
+
+type PostAuthRegisterResponseObject interface {
+	VisitPostAuthRegisterResponse(w http.ResponseWriter) error
+}
+
+type PostAuthRegister201Response struct {
+}
+
+func (response PostAuthRegister201Response) VisitPostAuthRegisterResponse(w http.ResponseWriter) error {
+	w.WriteHeader(201)
+	return nil
+}
+
+type PostAuthRegister409Response struct {
+}
+
+func (response PostAuthRegister409Response) VisitPostAuthRegisterResponse(w http.ResponseWriter) error {
+	w.WriteHeader(409)
 	return nil
 }
 
@@ -457,6 +516,9 @@ type StrictServerInterface interface {
 
 	// (POST /auth/logout)
 	PostAuthLogout(ctx context.Context, request PostAuthLogoutRequestObject) (PostAuthLogoutResponseObject, error)
+	// Register a new user
+	// (POST /auth/register)
+	PostAuthRegister(ctx context.Context, request PostAuthRegisterRequestObject) (PostAuthRegisterResponseObject, error)
 	// List expenses for a date
 	// (GET /expenses)
 	GetExpenses(ctx context.Context, request GetExpensesRequestObject) (GetExpensesResponseObject, error)
@@ -545,6 +607,37 @@ func (sh *strictHandler) PostAuthLogout(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostAuthLogoutResponseObject); ok {
 		if err := validResponse.VisitPostAuthLogoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostAuthRegister operation middleware
+func (sh *strictHandler) PostAuthRegister(w http.ResponseWriter, r *http.Request) {
+	var request PostAuthRegisterRequestObject
+
+	var body PostAuthRegisterJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAuthRegister(ctx, request.(PostAuthRegisterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAuthRegister")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAuthRegisterResponseObject); ok {
+		if err := validResponse.VisitPostAuthRegisterResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

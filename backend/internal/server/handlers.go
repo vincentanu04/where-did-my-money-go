@@ -1,32 +1,24 @@
-package http
+package server
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
-	app_service "github.com/vincentanu04/where-did-my-money-go/internal/app_service/auth"
+	app_service_auth "github.com/vincentanu04/where-did-my-money-go/internal/app_service/auth"
+	app_service_expenses "github.com/vincentanu04/where-did-my-money-go/internal/app_service/expenses"
 )
 
 // (GET /expenses)
 func (s *Server) GetExpenses(ctx context.Context, request oapi.GetExpensesRequestObject) (oapi.GetExpensesResponseObject, error) {
 	_ = request.Params // "2026-01-02"
 
-	return oapi.GetExpenses200JSONResponse([]oapi.Expense{
-		{
-			Id:       uuid.New(),
-			Category: "Food",
-			Amount:   400,
-			Date:     time.Now(),
-		},
-		{
-			Id:       uuid.New(),
-			Category: "Transport",
-			Amount:   150,
-			Date:     time.Now(),
-		},
-	}), nil
+	expenses, err := app_service_expenses.GetExpenses(ctx, s.deps, request.Params.Date)
+	if err != nil {
+		return nil, err
+	}
+
+	return oapi.GetExpenses200JSONResponse(expenses), nil
 }
 
 // (POST /expenses)
@@ -54,7 +46,7 @@ func (s *Server) GetSummary(ctx context.Context, request oapi.GetSummaryRequestO
 
 // (POST /auth/login)
 func (s *Server) PostAuthLogin(ctx context.Context, request oapi.PostAuthLoginRequestObject) (oapi.PostAuthLoginResponseObject, error) {
-	res, err := app_service.PostAuthLogin(ctx, request.Body.Email, request.Body.Password)
+	res, err := app_service_auth.PostAuthLogin(ctx, s.deps, request.Body.Email, request.Body.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -64,10 +56,15 @@ func (s *Server) PostAuthLogin(ctx context.Context, request oapi.PostAuthLoginRe
 
 // (POST /auth/logout)
 func (s *Server) PostAuthLogout(ctx context.Context, request oapi.PostAuthLogoutRequestObject) (oapi.PostAuthLogoutResponseObject, error) {
-	err := app_service.PostAuthLogout(ctx)
+	err := app_service_auth.PostAuthLogout(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return oapi.PostAuthLogout204Response{}, nil
+}
+
+// (POST /auth/register)
+func (s *Server) PostAuthRegister(ctx context.Context, request oapi.PostAuthRegisterRequestObject) (oapi.PostAuthRegisterResponseObject, error) {
+	return nil, nil
 }

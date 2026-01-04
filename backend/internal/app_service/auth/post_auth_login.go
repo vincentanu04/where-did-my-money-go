@@ -1,19 +1,28 @@
-package app_service
+package app_service_auth
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
+	sqlc "github.com/vincentanu04/where-did-my-money-go/internal/db/generated"
+	"github.com/vincentanu04/where-did-my-money-go/internal/deps"
 )
 
 const COOKIE_NAME = "access_token"
 
-func PostAuthLogin(ctx context.Context, email string, password string) (oapi.PostAuthLoginResponseObject, error) {
-	// db lookup
+func PostAuthLogin(ctx context.Context, deps deps.Deps, email string, password string) (oapi.PostAuthLoginResponseObject, error) {
+	db := deps.DB
+
+	res1, err := db.CreateUser(ctx, sqlc.CreateUserParams{
+		Email:        "vincentanu04@gmail.com",
+		PasswordHash: "test",
+	})
+	log.Println(res1, err)
 
 	token, err := createJWT("userID")
 	if err != nil {

@@ -1,0 +1,54 @@
+volumes:
+  node_modules_frontend:
+  vite_cache:
+  pgdata:
+
+services:
+  # portgenius-backend:
+  #   image: rust:1.80
+  #   container_name: portgenius-backend
+  #   working_dir: /app
+  #   volumes:
+  #     - ./backend:/app
+  #   entrypoint: 
+  #   - /bin/sh
+  #   - -c
+  #   - | 
+  #     cargo install cargo-watch && 
+  #     cargo watch -x run
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - portgenius-db
+
+  # portgenius-frontend:
+  #   image: oven/bun:1.2
+  #   container_name: portgenius-frontend
+  #   working_dir: /app
+  #   volumes:
+  #     - ./frontend:/app
+  #     - node_modules_frontend:/app/node_modules
+  #     - vite_cache:/app/node_modules/.vite
+  #   entrypoint:
+  #     - /bin/bash
+  #     - -c
+  #     - |
+  #       bun install
+  #       bun run dev
+  #   ports:
+  #     - "5173:5173"
+  #   # depends_on:
+  #     # - backend
+
+  wdmmg-db:
+    image: postgres:17
+    container_name: wdmmg-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wdmmg_user
+      POSTGRES_PASSWORD: wdmmg_password
+      POSTGRES_DB: wdmmg_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"

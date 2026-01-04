@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 
@@ -10,6 +11,17 @@ import (
 
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// PUBLIC ROUTES
+		if r.Method == http.MethodPost && r.URL.Path == "/auth/login" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if r.Method == http.MethodPost && r.URL.Path == "/auth/register" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		log.Println("Auth middleware")
 		cookie, err := r.Cookie("access_token")
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)

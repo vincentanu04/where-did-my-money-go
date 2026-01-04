@@ -1,45 +1,53 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/joho/godotenv"
 	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
-	httpHandlers "github.com/vincentanu04/where-did-my-money-go/internal/http"
-	"github.com/vincentanu04/where-did-my-money-go/internal/http/middleware"
+	"github.com/vincentanu04/where-did-my-money-go/internal/db"
+	sqlc "github.com/vincentanu04/where-did-my-money-go/internal/db/generated"
+	"github.com/vincentanu04/where-did-my-money-go/internal/deps"
+	"github.com/vincentanu04/where-did-my-money-go/internal/server"
+	"github.com/vincentanu04/where-did-my-money-go/internal/server/middleware"
 )
 
 func main() {
+	_ = godotenv.Load()
 	router := chi.NewRouter()
 
 	router.Use(cors.Handler(corsOptions()))
+	router.Use(middleware.Auth)
 
-	server := oapi.NewStrictHandlerWithOptions(
-		httpHandlers.NewServer(),
+	ctx := context.Background()
+	pool, err := db.New(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pool.Close()
+	queries := sqlc.New(pool)
+
+	handler := oapi.NewStrictHandlerWithOptions(
+		server.NewServer(deps.Deps{DB: queries}),
 		[]oapi.StrictMiddlewareFunc{},
 		oapi.StrictHTTPServerOptions{},
 	)
 
-	// public routes
-	router.Route("/auth/login", func(r chi.Router) {
-		oapi.HandlerFromMux(server, r)
-	})
-
-	// protected routes
-	router.Group(func(r chi.Router) {
-		r.Use(middleware.Auth)
-		oapi.HandlerFromMux(server, r)
-	})
+	server := oapi.HandlerFromMux(handler, router)
 
 	log.Println("Listening on :8080")
-	http.ListenAndServe(":8080", router)
+	http.ListenAndServe(":8080", server)
 }
 
 func corsOptions() cors.Options {
-	if os.Getenv("APP_ENV") == "prod" {
+	env := os.Getenv("APP_ENV")
+
+	if env == "prod" {
 		return cors.Options{
 			AllowedOrigins: []string{
 				"https://money.yourdomain.com",

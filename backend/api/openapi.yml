@@ -7,6 +7,30 @@ servers:
   - url: http://localhost:8080
 
 paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        "201":
+          description: User registered
+        "409":
+          description: Email already exists
   /auth/login:
     post:
       requestBody:

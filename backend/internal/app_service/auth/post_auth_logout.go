@@ -1,4 +1,4 @@
-package app_service
+package app_service_auth
 
 import (
 	"context"
