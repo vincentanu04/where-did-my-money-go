@@ -7,6 +7,34 @@ servers:
   - url: http://localhost:8080
 
 paths:
+  /auth/login:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: 
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "204":
+          description: Logged in
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+  /auth/logout:
+    post:
+      responses:
+        "204":
+          description: Logged out
   /expenses:
     get:
       summary: List expenses for a date

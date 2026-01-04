@@ -4,18 +4,26 @@ import { CategoryGrid } from "@/components/CategoryGrid"
 import { AddExpenseModal } from "@/components/AddExpenseModal"
 import { FabHistory } from "@/components/FabHistory"
 import { useSelectedDate } from "@/hooks/useSelectedDate"
-import type { Expense } from "@/types/expense"
-import { useGetExpensesQuery } from '@/api/client'
+import { useGetExpensesQuery, usePostExpensesMutation, type CreateExpense } from '@/api/client'
 
 export default function Home() {
-  const { date, prevDay, nextDay } = useSelectedDate()
+  const { date, prevDay, nextDay } = useSelectedDate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [expenses, setExpenses] = useState<Expense[]>([])
   const { data: expensesData } = useGetExpensesQuery({
     date: date.toISOString().slice(0, 10),
   });
 
-  console.log(expensesData)
+  const [postExpense, _postExpenseRes] =  usePostExpensesMutation();
+  
+  const handleAddExpense = (category: string, amount: number) => {
+    const newExpense: CreateExpense = {
+      category,
+      amount,
+      date: date.toISOString().slice(0, 10),
+    };
+    
+    postExpense({createExpense: newExpense});
+  };
 
   return (
     <>
@@ -29,15 +37,9 @@ export default function Home() {
         category={selectedCategory}
         onClose={() => setSelectedCategory(null)}
         onSubmit={(amount) => {
-          setExpenses(e => [
-            ...e,
-            {
-              id: crypto.randomUUID(),
-              category: selectedCategory!,
-              amount,
-              date,
-            },
-          ])
+          if (!selectedCategory) return;
+
+          handleAddExpense(selectedCategory, amount);
         }}
       />
       <FabHistory />

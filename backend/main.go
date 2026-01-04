@@ -7,24 +7,35 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	api "github.com/vincentanu04/where-did-my-money-go/generated/server"
+	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
 	httpHandlers "github.com/vincentanu04/where-did-my-money-go/internal/http"
+	"github.com/vincentanu04/where-did-my-money-go/internal/http/middleware"
 )
 
 func main() {
-	r := chi.NewRouter()
+	router := chi.NewRouter()
 
-	r.Use(cors.Handler(corsOptions()))
+	router.Use(cors.Handler(corsOptions()))
 
-	server := api.NewStrictHandlerWithOptions(
+	server := oapi.NewStrictHandlerWithOptions(
 		httpHandlers.NewServer(),
-		[]api.StrictMiddlewareFunc{},
-		api.StrictHTTPServerOptions{},
+		[]oapi.StrictMiddlewareFunc{},
+		oapi.StrictHTTPServerOptions{},
 	)
-	handler := api.HandlerFromMux(server, r)
+
+	// public routes
+	router.Route("/auth/login", func(r chi.Router) {
+		oapi.HandlerFromMux(server, r)
+	})
+
+	// protected routes
+	router.Group(func(r chi.Router) {
+		r.Use(middleware.Auth)
+		oapi.HandlerFromMux(server, r)
+	})
 
 	log.Println("Listening on :8080")
-	http.ListenAndServe(":8080", handler)
+	http.ListenAndServe(":8080", router)
 }
 
 func corsOptions() cors.Options {

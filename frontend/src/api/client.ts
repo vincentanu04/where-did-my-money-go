@@ -6,6 +6,24 @@ const injectedRtkApi = api
   })
   .injectEndpoints({
     endpoints: (build) => ({
+      postAuthLogin: build.mutation<
+        PostAuthLoginApiResponse,
+        PostAuthLoginApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/auth/login`,
+          method: "POST",
+          body: queryArg.body,
+        }),
+        invalidatesTags: [],
+      }),
+      postAuthLogout: build.mutation<
+        PostAuthLogoutApiResponse,
+        PostAuthLogoutApiArg
+      >({
+        query: () => ({ url: `/auth/logout`, method: "POST" }),
+        invalidatesTags: [],
+      }),
       getExpenses: build.query<GetExpensesApiResponse, GetExpensesApiArg>({
         query: (queryArg) => ({
           url: `/expenses`,
@@ -38,6 +56,15 @@ const injectedRtkApi = api
     overrideExisting: false,
   });
 export { injectedRtkApi as enhancedApi };
+export type PostAuthLoginApiResponse = unknown;
+export type PostAuthLoginApiArg = {
+  body: {
+    email: string;
+    password: string;
+  };
+};
+export type PostAuthLogoutApiResponse = unknown;
+export type PostAuthLogoutApiArg = void;
 export type GetExpensesApiResponse = /** status 200 Expense list */ Expense[];
 export type GetExpensesApiArg = {
   date: string;
@@ -67,6 +94,8 @@ export type CategorySummary = {
   total: number;
 };
 export const {
+  usePostAuthLoginMutation,
+  usePostAuthLogoutMutation,
   useGetExpensesQuery,
   usePostExpensesMutation,
   useGetSummaryQuery,
