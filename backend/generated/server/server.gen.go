@@ -45,8 +45,8 @@ type PostAuthLoginJSONBody struct {
 
 // PostAuthRegisterJSONBody defines parameters for PostAuthRegister.
 type PostAuthRegisterJSONBody struct {
-	Email    openapi_types.Email `json:"email"`
-	Password string              `json:"password"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // GetExpensesParams defines parameters for GetExpenses.
@@ -425,10 +425,16 @@ type PostAuthLogoutResponseObject interface {
 	VisitPostAuthLogoutResponse(w http.ResponseWriter) error
 }
 
+type PostAuthLogout204ResponseHeaders struct {
+	SetCookie string
+}
+
 type PostAuthLogout204Response struct {
+	Headers PostAuthLogout204ResponseHeaders
 }
 
 func (response PostAuthLogout204Response) VisitPostAuthLogoutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Set-Cookie", fmt.Sprint(response.Headers.SetCookie))
 	w.WriteHeader(204)
 	return nil
 }
@@ -441,11 +447,17 @@ type PostAuthRegisterResponseObject interface {
 	VisitPostAuthRegisterResponse(w http.ResponseWriter) error
 }
 
-type PostAuthRegister201Response struct {
+type PostAuthRegister204ResponseHeaders struct {
+	SetCookie string
 }
 
-func (response PostAuthRegister201Response) VisitPostAuthRegisterResponse(w http.ResponseWriter) error {
-	w.WriteHeader(201)
+type PostAuthRegister204Response struct {
+	Headers PostAuthRegister204ResponseHeaders
+}
+
+func (response PostAuthRegister204Response) VisitPostAuthRegisterResponse(w http.ResponseWriter) error {
+	w.Header().Set("Set-Cookie", fmt.Sprint(response.Headers.SetCookie))
+	w.WriteHeader(204)
 	return nil
 }
 

@@ -9,6 +9,8 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
+const COOKIE_NAME = "access_token"
+
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// PUBLIC ROUTES
@@ -22,8 +24,9 @@ func Auth(next http.Handler) http.Handler {
 		}
 
 		log.Println("Auth middleware")
-		cookie, err := r.Cookie("access_token")
+		cookie, err := r.Cookie(COOKIE_NAME)
 		if err != nil {
+			log.Println("HERE 1", err)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -37,6 +40,7 @@ func Auth(next http.Handler) http.Handler {
 		)
 
 		if err != nil || !token.Valid {
+			log.Println("HERE 2")
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}

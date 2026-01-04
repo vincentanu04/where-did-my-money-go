@@ -56,15 +56,20 @@ func (s *Server) PostAuthLogin(ctx context.Context, request oapi.PostAuthLoginRe
 
 // (POST /auth/logout)
 func (s *Server) PostAuthLogout(ctx context.Context, request oapi.PostAuthLogoutRequestObject) (oapi.PostAuthLogoutResponseObject, error) {
-	err := app_service_auth.PostAuthLogout(ctx)
+	res, err := app_service_auth.PostAuthLogout(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return oapi.PostAuthLogout204Response{}, nil
+	return res, nil
 }
 
 // (POST /auth/register)
 func (s *Server) PostAuthRegister(ctx context.Context, request oapi.PostAuthRegisterRequestObject) (oapi.PostAuthRegisterResponseObject, error) {
-	return nil, nil
+	res, err := app_service_auth.PostAuthRegister(ctx, s.deps, request.Body.Email, request.Body.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
