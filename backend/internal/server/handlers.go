@@ -3,34 +3,31 @@ package server
 import (
 	"context"
 
-	"github.com/google/uuid"
 	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
 	app_service_auth "github.com/vincentanu04/where-did-my-money-go/internal/app_service/auth"
 	app_service_expenses "github.com/vincentanu04/where-did-my-money-go/internal/app_service/expenses"
 )
 
-// (GET /expenses)
-func (s *Server) GetExpenses(ctx context.Context, request oapi.GetExpensesRequestObject) (oapi.GetExpensesResponseObject, error) {
-	_ = request.Params // "2026-01-02"
-
-	expenses, err := app_service_expenses.GetExpenses(ctx, s.deps, request.Params.Date)
+// (POST /expenses/list)
+func (s *Server) PostExpensesList(ctx context.Context, request oapi.PostExpensesListRequestObject) (oapi.PostExpensesListResponseObject, error) {
+	expensesByCategory, err := app_service_expenses.GetExpensesByCategory(ctx, s.deps, request.Body.Date, request.Body.Month, request.Body.Year)
 	if err != nil {
 		return nil, err
 	}
 
-	return oapi.GetExpenses200JSONResponse(expenses), nil
+	return oapi.PostExpensesList200JSONResponse(expensesByCategory), nil
 }
 
-// (POST /expenses)
-func (s *Server) PostExpenses(ctx context.Context, request oapi.PostExpensesRequestObject) (oapi.PostExpensesResponseObject, error) {
+// (POST /expenses/create)
+func (s *Server) PostExpensesCreate(ctx context.Context, request oapi.PostExpensesCreateRequestObject) (oapi.PostExpensesCreateResponseObject, error) {
 	payload := request.Body
 
-	return oapi.PostExpenses201JSONResponse(oapi.Expense{
-		Id:       uuid.New(),
-		Category: payload.Category,
-		Amount:   payload.Amount,
-		Date:     payload.Date,
-	}), nil
+	expense, err := app_service_expenses.PostExpensesCreate(ctx, s.deps, payload.Date, payload.Amount, payload.Category)
+	if err != nil {
+		return nil, err
+	}
+
+	return oapi.PostExpensesCreate201JSONResponse(*expense), nil
 }
 
 // (GET /summary)

@@ -24,9 +24,16 @@ type CategorySummary struct {
 
 // CreateExpense defines model for CreateExpense.
 type CreateExpense struct {
-	Amount   int       `json:"amount"`
-	Category string    `json:"category"`
-	Date     time.Time `json:"date"`
+	Amount   int    `json:"amount"`
+	Category string `json:"category"`
+	Date     Date   `json:"date"`
+}
+
+// Date defines model for Date.
+type Date struct {
+	Date  int `json:"date"`
+	Month int `json:"month"`
+	Year  int `json:"year"`
 }
 
 // Expense defines model for Expense.
@@ -35,6 +42,12 @@ type Expense struct {
 	Category string             `json:"category"`
 	Date     time.Time          `json:"date"`
 	Id       openapi_types.UUID `json:"id"`
+}
+
+// ExpensesByCategory defines model for ExpensesByCategory.
+type ExpensesByCategory struct {
+	Category string    `json:"category"`
+	Expenses []Expense `json:"expenses"`
 }
 
 // PostAuthLoginJSONBody defines parameters for PostAuthLogin.
@@ -49,11 +62,6 @@ type PostAuthRegisterJSONBody struct {
 	Password string `json:"password"`
 }
 
-// GetExpensesParams defines parameters for GetExpenses.
-type GetExpensesParams struct {
-	Date openapi_types.Date `form:"date" json:"date"`
-}
-
 // GetSummaryParams defines parameters for GetSummary.
 type GetSummaryParams struct {
 	Date openapi_types.Date `form:"date" json:"date"`
@@ -65,8 +73,11 @@ type PostAuthLoginJSONRequestBody PostAuthLoginJSONBody
 // PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
 type PostAuthRegisterJSONRequestBody PostAuthRegisterJSONBody
 
-// PostExpensesJSONRequestBody defines body for PostExpenses for application/json ContentType.
-type PostExpensesJSONRequestBody = CreateExpense
+// PostExpensesCreateJSONRequestBody defines body for PostExpensesCreate for application/json ContentType.
+type PostExpensesCreateJSONRequestBody = CreateExpense
+
+// PostExpensesListJSONRequestBody defines body for PostExpensesList for application/json ContentType.
+type PostExpensesListJSONRequestBody = Date
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -79,12 +90,12 @@ type ServerInterface interface {
 	// Register a new user
 	// (POST /auth/register)
 	PostAuthRegister(w http.ResponseWriter, r *http.Request)
-	// List expenses for a date
-	// (GET /expenses)
-	GetExpenses(w http.ResponseWriter, r *http.Request, params GetExpensesParams)
 	// Create an expense
-	// (POST /expenses)
-	PostExpenses(w http.ResponseWriter, r *http.Request)
+	// (POST /expenses/create)
+	PostExpensesCreate(w http.ResponseWriter, r *http.Request)
+	// List expenses for a date
+	// (POST /expenses/list)
+	PostExpensesList(w http.ResponseWriter, r *http.Request)
 	// Category summary for a date
 	// (GET /summary)
 	GetSummary(w http.ResponseWriter, r *http.Request, params GetSummaryParams)
@@ -110,15 +121,15 @@ func (_ Unimplemented) PostAuthRegister(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List expenses for a date
-// (GET /expenses)
-func (_ Unimplemented) GetExpenses(w http.ResponseWriter, r *http.Request, params GetExpensesParams) {
+// Create an expense
+// (POST /expenses/create)
+func (_ Unimplemented) PostExpensesCreate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create an expense
-// (POST /expenses)
-func (_ Unimplemented) PostExpenses(w http.ResponseWriter, r *http.Request) {
+// List expenses for a date
+// (POST /expenses/list)
+func (_ Unimplemented) PostExpensesList(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -179,31 +190,11 @@ func (siw *ServerInterfaceWrapper) PostAuthRegister(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// GetExpenses operation middleware
-func (siw *ServerInterfaceWrapper) GetExpenses(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetExpensesParams
-
-	// ------------- Required query parameter "date" -------------
-
-	if paramValue := r.URL.Query().Get("date"); paramValue != "" {
-
-	} else {
-		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "date"})
-		return
-	}
-
-	err = runtime.BindQueryParameter("form", true, true, "date", r.URL.Query(), &params.Date)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
-		return
-	}
+// PostExpensesCreate operation middleware
+func (siw *ServerInterfaceWrapper) PostExpensesCreate(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetExpenses(w, r, params)
+		siw.Handler.PostExpensesCreate(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -213,11 +204,11 @@ func (siw *ServerInterfaceWrapper) GetExpenses(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
-// PostExpenses operation middleware
-func (siw *ServerInterfaceWrapper) PostExpenses(w http.ResponseWriter, r *http.Request) {
+// PostExpensesList operation middleware
+func (siw *ServerInterfaceWrapper) PostExpensesList(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PostExpenses(w, r)
+		siw.Handler.PostExpensesList(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -384,10 +375,10 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/expenses", wrapper.GetExpenses)
+		r.Post(options.BaseURL+"/expenses/create", wrapper.PostExpensesCreate)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/expenses", wrapper.PostExpenses)
+		r.Post(options.BaseURL+"/expenses/list", wrapper.PostExpensesList)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/summary", wrapper.GetSummary)
@@ -469,36 +460,36 @@ func (response PostAuthRegister409Response) VisitPostAuthRegisterResponse(w http
 	return nil
 }
 
-type GetExpensesRequestObject struct {
-	Params GetExpensesParams
+type PostExpensesCreateRequestObject struct {
+	Body *PostExpensesCreateJSONRequestBody
 }
 
-type GetExpensesResponseObject interface {
-	VisitGetExpensesResponse(w http.ResponseWriter) error
+type PostExpensesCreateResponseObject interface {
+	VisitPostExpensesCreateResponse(w http.ResponseWriter) error
 }
 
-type GetExpenses200JSONResponse []Expense
+type PostExpensesCreate201JSONResponse Expense
 
-func (response GetExpenses200JSONResponse) VisitGetExpensesResponse(w http.ResponseWriter) error {
+func (response PostExpensesCreate201JSONResponse) VisitPostExpensesCreateResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
+	w.WriteHeader(201)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type PostExpensesRequestObject struct {
-	Body *PostExpensesJSONRequestBody
+type PostExpensesListRequestObject struct {
+	Body *PostExpensesListJSONRequestBody
 }
 
-type PostExpensesResponseObject interface {
-	VisitPostExpensesResponse(w http.ResponseWriter) error
+type PostExpensesListResponseObject interface {
+	VisitPostExpensesListResponse(w http.ResponseWriter) error
 }
 
-type PostExpenses201JSONResponse Expense
+type PostExpensesList200JSONResponse []ExpensesByCategory
 
-func (response PostExpenses201JSONResponse) VisitPostExpensesResponse(w http.ResponseWriter) error {
+func (response PostExpensesList200JSONResponse) VisitPostExpensesListResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
+	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -531,12 +522,12 @@ type StrictServerInterface interface {
 	// Register a new user
 	// (POST /auth/register)
 	PostAuthRegister(ctx context.Context, request PostAuthRegisterRequestObject) (PostAuthRegisterResponseObject, error)
-	// List expenses for a date
-	// (GET /expenses)
-	GetExpenses(ctx context.Context, request GetExpensesRequestObject) (GetExpensesResponseObject, error)
 	// Create an expense
-	// (POST /expenses)
-	PostExpenses(ctx context.Context, request PostExpensesRequestObject) (PostExpensesResponseObject, error)
+	// (POST /expenses/create)
+	PostExpensesCreate(ctx context.Context, request PostExpensesCreateRequestObject) (PostExpensesCreateResponseObject, error)
+	// List expenses for a date
+	// (POST /expenses/list)
+	PostExpensesList(ctx context.Context, request PostExpensesListRequestObject) (PostExpensesListResponseObject, error)
 	// Category summary for a date
 	// (GET /summary)
 	GetSummary(ctx context.Context, request GetSummaryRequestObject) (GetSummaryResponseObject, error)
@@ -657,37 +648,11 @@ func (sh *strictHandler) PostAuthRegister(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// GetExpenses operation middleware
-func (sh *strictHandler) GetExpenses(w http.ResponseWriter, r *http.Request, params GetExpensesParams) {
-	var request GetExpensesRequestObject
+// PostExpensesCreate operation middleware
+func (sh *strictHandler) PostExpensesCreate(w http.ResponseWriter, r *http.Request) {
+	var request PostExpensesCreateRequestObject
 
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetExpenses(ctx, request.(GetExpensesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetExpenses")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetExpensesResponseObject); ok {
-		if err := validResponse.VisitGetExpensesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// PostExpenses operation middleware
-func (sh *strictHandler) PostExpenses(w http.ResponseWriter, r *http.Request) {
-	var request PostExpensesRequestObject
-
-	var body PostExpensesJSONRequestBody
+	var body PostExpensesCreateJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -695,18 +660,49 @@ func (sh *strictHandler) PostExpenses(w http.ResponseWriter, r *http.Request) {
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PostExpenses(ctx, request.(PostExpensesRequestObject))
+		return sh.ssi.PostExpensesCreate(ctx, request.(PostExpensesCreateRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostExpenses")
+		handler = middleware(handler, "PostExpensesCreate")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PostExpensesResponseObject); ok {
-		if err := validResponse.VisitPostExpensesResponse(w); err != nil {
+	} else if validResponse, ok := response.(PostExpensesCreateResponseObject); ok {
+		if err := validResponse.VisitPostExpensesCreateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostExpensesList operation middleware
+func (sh *strictHandler) PostExpensesList(w http.ResponseWriter, r *http.Request) {
+	var request PostExpensesListRequestObject
+
+	var body PostExpensesListJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostExpensesList(ctx, request.(PostExpensesListRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostExpensesList")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostExpensesListResponseObject); ok {
+		if err := validResponse.VisitPostExpensesListResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -1,6 +1,6 @@
 include .env
 
-.PHONY: gen gen-go gen-ts tidy migrate-up
+.PHONY: gen gen-go gen-ts tidy migrate-up migrate-down sqlc-codegen
 
 ## Generate everything
 gen: gen-go gen-ts tidy
@@ -19,11 +19,16 @@ gen-ts:
 tidy:
 	go mod tidy
 
-migrate-up:
-	go tool goose -dir internal/db/migrations postgres ${DATABASE_URL} up
-	
-migrate-down:
-	go tool goose -dir internal/db/migrations postgres ${DATABASE_URL} down
+## Migrate up
+migrate-up: migrate-up-only sqlc-codegen
+migrate-up-only:
+	go tool goose -dir internal/db/migrations postgres $(DATABASE_URL) up
 
-migrate-codegen:
+## Migrate down
+migrate-down: migrate-down-only sqlc-codegen
+migrate-down-only:
+	go tool goose -dir internal/db/migrations postgres $(DATABASE_URL) down
+
+## Migrate codegen
+sqlc-codegen:
 	go tool sqlc generate -f internal/db/sqlc.yml

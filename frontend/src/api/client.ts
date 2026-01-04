@@ -35,25 +35,28 @@ const injectedRtkApi = api
         query: () => ({ url: `/auth/logout`, method: "POST" }),
         invalidatesTags: [],
       }),
-      getExpenses: build.query<GetExpensesApiResponse, GetExpensesApiArg>({
+      postExpensesList: build.mutation<
+        PostExpensesListApiResponse,
+        PostExpensesListApiArg
+      >({
         query: (queryArg) => ({
-          url: `/expenses`,
-          params: {
-            date: queryArg.date,
-          },
+          url: `/expenses/list`,
+          method: "POST",
+          body: queryArg.date,
         }),
-        providesTags: [],
+        invalidatesTags: [],
       }),
-      postExpenses: build.mutation<PostExpensesApiResponse, PostExpensesApiArg>(
-        {
-          query: (queryArg) => ({
-            url: `/expenses`,
-            method: "POST",
-            body: queryArg.createExpense,
-          }),
-          invalidatesTags: [],
-        },
-      ),
+      postExpensesCreate: build.mutation<
+        PostExpensesCreateApiResponse,
+        PostExpensesCreateApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/expenses/create`,
+          method: "POST",
+          body: queryArg.createExpense,
+        }),
+        invalidatesTags: [],
+      }),
       getSummary: build.query<GetSummaryApiResponse, GetSummaryApiArg>({
         query: (queryArg) => ({
           url: `/summary`,
@@ -83,12 +86,13 @@ export type PostAuthLoginApiArg = {
 };
 export type PostAuthLogoutApiResponse = unknown;
 export type PostAuthLogoutApiArg = void;
-export type GetExpensesApiResponse = /** status 200 Expense list */ Expense[];
-export type GetExpensesApiArg = {
-  date: string;
+export type PostExpensesListApiResponse =
+  /** status 200 Expense list */ ExpensesByCategory[];
+export type PostExpensesListApiArg = {
+  date: Date;
 };
-export type PostExpensesApiResponse = /** status 201 Created */ Expense;
-export type PostExpensesApiArg = {
+export type PostExpensesCreateApiResponse = /** status 201 Created */ Expense;
+export type PostExpensesCreateApiArg = {
   createExpense: CreateExpense;
 };
 export type GetSummaryApiResponse =
@@ -102,10 +106,19 @@ export type Expense = {
   amount: number;
   date: string;
 };
+export type ExpensesByCategory = {
+  category: string;
+  expenses: Expense[];
+};
+export type Date = {
+  date: number;
+  month: number;
+  year: number;
+};
 export type CreateExpense = {
   category: string;
   amount: number;
-  date: string;
+  date: Date;
 };
 export type CategorySummary = {
   category: string;
@@ -115,7 +128,7 @@ export const {
   usePostAuthRegisterMutation,
   usePostAuthLoginMutation,
   usePostAuthLogoutMutation,
-  useGetExpensesQuery,
-  usePostExpensesMutation,
+  usePostExpensesListMutation,
+  usePostExpensesCreateMutation,
   useGetSummaryQuery,
 } = injectedRtkApi;

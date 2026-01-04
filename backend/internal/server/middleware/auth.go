@@ -7,7 +7,12 @@ import (
 	"os"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 )
+
+type userIDContextKeyType struct{}
+
+var userIDContextKey = userIDContextKeyType{}
 
 const COOKIE_NAME = "access_token"
 
@@ -46,8 +51,13 @@ func Auth(next http.Handler) http.Handler {
 		}
 
 		claims := token.Claims.(*jwt.RegisteredClaims)
-		ctx := context.WithValue(r.Context(), "userID", claims.Subject)
+		ctx := context.WithValue(r.Context(), userIDContextKey, claims.Subject)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func UserIDFromContext(ctx context.Context) uuid.UUID {
+	userID, _ := ctx.Value(userIDContextKey).(string)
+	return uuid.MustParse(userID)
 }

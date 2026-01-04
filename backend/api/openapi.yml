@@ -65,16 +65,15 @@ paths:
             Set-Cookie:
               schema:
                 type: string
-  /expenses:
-    get:
+  /expenses/list:
+    post:
       summary: List expenses for a date
-      parameters:
-        - name: date
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Date"
       responses:
         "200":
           description: Expense list
@@ -83,7 +82,8 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Expense"
+                  $ref: "#/components/schemas/ExpensesByCategory"
+  /expenses/create:
     post:
       summary: Create an expense
       requestBody:
@@ -137,15 +137,17 @@ components:
           format: date-time
     CreateExpense:
       type: object
-      required: [category, amount, date]
+      required:
+        - category
+        - amount
+        - date
       properties:
         category:
           type: string
         amount:
           type: integer
         date:
-          type: string
-          format: date-time
+          $ref: "#/components/schemas/Date"
     CategorySummary:
       type: object
       required: [category, total]
@@ -153,4 +155,29 @@ components:
         category:
           type: string
         total:
+          type: integer
+    ExpensesByCategory:
+      type: object
+      required: 
+        - category
+        - expenses
+      properties:
+        category:
+          type: string
+        expenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Expense"
+    Date:
+      type: object
+      required:
+        - date
+        - month
+        - year
+      properties:
+        date:
+          type: integer
+        month:
+          type: integer
+        year:
           type: integer
