@@ -1,28 +1,24 @@
-// components/export/RangeExport.tsx
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
-// import { usePostExpensesExportMutation } from "@/api/client"
 import { downloadBlob } from "@/utils/download"
+import { fetchExpensesCsv } from '@/utils/api'
 
 export function RangeExport({ onDone }: { onDone: () => void }) {
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
-  // const [exportCsv, { isLoading }] = usePostExpensesExportMutation()
 
   const handleExport = async () => {
-    // if (!from || !to) return
+    if (!from || !to) return
 
-    // const blob = await exportCsv({
-    //   expenseExportRequest: {
-    //     type: "range",
-    //     from,
-    //     to,
-    //   },
-    // }).unwrap()
+    const blob = await fetchExpensesCsv({
+      type: "range",
+      from,
+      to,
+    })
 
-    // downloadBlob(blob, "expenses-range.csv")
-    // onDone()
+    downloadBlob(blob as any, "expenses-range.csv")
+    onDone()
   }
 
   return (
@@ -50,7 +46,7 @@ export function RangeExport({ onDone }: { onDone: () => void }) {
       <Button
         className="w-full"
         onClick={handleExport}
-        // disabled={!from || !to || isLoading}
+        disabled={!from || !to}
       >
         Export CSV
       </Button>

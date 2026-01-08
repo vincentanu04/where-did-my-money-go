@@ -1,24 +1,21 @@
 import { Button } from "@/components/ui/button"
 import { Select, SelectItem, SelectTrigger, SelectValue, SelectContent } from "@/components/ui/select"
 import { useState } from "react"
-// import { usePostExpensesExportMutation } from "@/api/client"
 import { downloadBlob } from '@/utils/download'
+import { fetchExpensesCsv } from '@/utils/api'
 
 export function MonthlyExport({ onDone }: { onDone: () => void }) {
   const [offset, setOffset] = useState("0")
   const monthOptions = getMonthOptions(24);
-  // const [exportCsv] = usePostExpensesExportMutation()
 
   const handleExport = async () => {
-    // const blob = await exportCsv({
-    //   expenseExportRequest: {
-    //     type: "monthly",
-    //     monthOffset: Number(offset),
-    //   },
-    // }).unwrap()
+    const blob = await fetchExpensesCsv({
+      type: "monthly",
+      monthOffset: Number(offset),
+    })
 
-    // downloadBlob(blob, "expenses.csv")
-    // onDone()
+    downloadBlob(blob, "expenses.csv")
+    onDone()
   }
 
   return (

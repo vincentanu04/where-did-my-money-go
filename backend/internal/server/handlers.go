@@ -22,12 +22,32 @@ func (s *Server) PostExpensesList(ctx context.Context, request oapi.PostExpenses
 func (s *Server) PostExpensesCreate(ctx context.Context, request oapi.PostExpensesCreateRequestObject) (oapi.PostExpensesCreateResponseObject, error) {
 	payload := request.Body
 
-	expense, err := app_service_expenses.PostExpensesCreate(ctx, s.deps, payload.Date, payload.Amount, payload.Category)
+	expense, err := app_service_expenses.PostExpensesCreate(ctx, s.deps, payload.Date, payload.Amount, payload.Category, payload.Remark)
 	if err != nil {
 		return nil, err
 	}
 
 	return oapi.PostExpensesCreate201JSONResponse(*expense), nil
+}
+
+// (POST /expenses/export)
+func (s *Server) PostExpensesExport(
+	ctx context.Context,
+	request oapi.PostExpensesExportRequestObject,
+) (oapi.PostExpensesExportResponseObject, error) {
+	reader, size, err := app_service_expenses.ExportExpensesCSV(
+		ctx,
+		s.deps,
+		*request.Body,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return oapi.PostExpensesExport200TextcsvResponse{
+		Body:          reader,
+		ContentLength: size,
+	}, nil
 }
 
 // (GET /summary)

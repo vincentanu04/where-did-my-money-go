@@ -38,6 +38,8 @@ export const ExpenseList = ({ expenses }: Props) => {
                 className="flex justify-between text-muted-foreground"
               >
                 <span>¥{expense.amount}</span>
+                {/* Show remark */}
+                <span className="italic text-gray-500">{expense.remark || ''}</span>
               </div>
             ))}
           </div>

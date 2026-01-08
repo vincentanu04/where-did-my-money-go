@@ -8,24 +8,21 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useState } from "react"
-// import { usePostExpensesExportMutation } from "@/api/client"
 import { downloadBlob } from "@/utils/download"
+import { fetchExpensesCsv } from '@/utils/api'
 
 export function YearlyExport({ onDone }: { onDone: () => void }) {
   const [offset, setOffset] = useState("0")
   const yearOptions = getYearOptions(10)
-  // const [exportCsv, { isLoading }] = usePostExpensesExportMutation()
 
   const handleExport = async () => {
-    // const blob = await exportCsv({
-    //   expenseExportRequest: {
-    //     type: "yearly",
-    //     yearOffset: Number(offset),
-    //   },
-    // }).unwrap()
+    const blob = await fetchExpensesCsv({
+      type: "yearly",
+      year: new Date().getFullYear() - Number(offset),
+    })
 
-    // downloadBlob(blob, "expenses-year.csv")
-    // onDone()
+    downloadBlob(blob as any, "expenses-year.csv")
+    onDone()
   }
 
   return (
@@ -49,7 +46,6 @@ export function YearlyExport({ onDone }: { onDone: () => void }) {
       <Button
         className="w-full"
         onClick={handleExport}
-        // disabled={isLoading}
       >
         Export CSV
       </Button>

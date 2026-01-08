@@ -61,6 +61,17 @@ const injectedRtkApi = api
         }),
         invalidatesTags: [],
       }),
+      postExpensesExport: build.mutation<
+        PostExpensesExportApiResponse,
+        PostExpensesExportApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/expenses/export`,
+          method: "POST",
+          body: queryArg.expenseExportRequest,
+        }),
+        invalidatesTags: [],
+      }),
       getSummary: build.query<GetSummaryApiResponse, GetSummaryApiArg>({
         query: (queryArg) => ({
           url: `/summary`,
@@ -101,6 +112,10 @@ export type PostExpensesCreateApiResponse = /** status 201 Created */ Expense;
 export type PostExpensesCreateApiArg = {
   createExpense: CreateExpense;
 };
+export type PostExpensesExportApiResponse = unknown;
+export type PostExpensesExportApiArg = {
+  expenseExportRequest: ExpenseExportRequest;
+};
 export type GetSummaryApiResponse =
   /** status 200 Summary per category */ CategorySummary[];
 export type GetSummaryApiArg = {
@@ -111,6 +126,7 @@ export type Expense = {
   category: string;
   amount: number;
   date: string;
+  remark?: string;
 };
 export type ExpensesByCategory = {
   category: string;
@@ -125,6 +141,15 @@ export type CreateExpense = {
   category: string;
   amount: number;
   date: Date;
+  remark?: string;
+};
+export type ExpenseExportRequest = {
+  type: "monthly" | "yearly" | "range";
+  /** 0 = current month, 1 = previous month */
+  monthOffset?: number;
+  year?: number;
+  from?: string;
+  to?: string;
 };
 export type CategorySummary = {
   category: string;
@@ -137,5 +162,6 @@ export const {
   usePostAuthLogoutMutation,
   usePostExpensesListMutation,
   usePostExpensesCreateMutation,
+  usePostExpensesExportMutation,
   useGetSummaryQuery,
 } = injectedRtkApi;

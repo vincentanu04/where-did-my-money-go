@@ -12,11 +12,12 @@ export default function Home() {
 
   const [postExpense, _postExpenseRes] =  usePostExpensesCreateMutation();
   
-  const handleAddExpense = (category: string, amount: number) => {
+  const handleAddExpense = (category: string, amount: number, remark?: string) => {
     const newExpense: CreateExpense = {
       category,
       amount,
       date: oapiDate,
+      remark,
     };
     
     postExpense({createExpense: newExpense});
@@ -33,10 +34,10 @@ export default function Home() {
       <AddExpenseModal
         category={selectedCategory}
         onClose={() => setSelectedCategory(null)}
-        onSubmit={(amount) => {
+        onSubmit={(amount, remark) => {
           if (!selectedCategory) return;
 
-          handleAddExpense(selectedCategory, amount);
+          handleAddExpense(selectedCategory, amount, remark);
         }}
       />
       <FabHistory />

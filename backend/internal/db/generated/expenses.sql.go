@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createExpense = `-- name: CreateExpense :one
@@ -17,10 +18,11 @@ INSERT INTO expenses (
   user_id,
   category,
   amount,
-  expense_date
+  expense_date,
+  remark
 )
 VALUES (
-  $1, $2, $3, $4
+  $1, $2, $3, $4, $5
 )
 RETURNING
   id,
@@ -28,93 +30,57 @@ RETURNING
   category,
   amount,
   expense_date,
+  remark,
   created_at
 `
 
 type CreateExpenseParams struct {
-	UserID      uuid.UUID `json:"user_id"`
-	Category    string    `json:"category"`
-	Amount      int32     `json:"amount"`
-	ExpenseDate time.Time `json:"expense_date"`
+	UserID      uuid.UUID   `json:"user_id"`
+	Category    string      `json:"category"`
+	Amount      int32       `json:"amount"`
+	ExpenseDate time.Time   `json:"expense_date"`
+	Remark      pgtype.Text `json:"remark"`
 }
 
-func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (Expense, error) {
+type CreateExpenseRow struct {
+	ID          uuid.UUID   `json:"id"`
+	UserID      uuid.UUID   `json:"user_id"`
+	Category    string      `json:"category"`
+	Amount      int32       `json:"amount"`
+	ExpenseDate time.Time   `json:"expense_date"`
+	Remark      pgtype.Text `json:"remark"`
+	CreatedAt   time.Time   `json:"created_at"`
+}
+
+func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (CreateExpenseRow, error) {
 	row := q.db.QueryRow(ctx, createExpense,
 		arg.UserID,
 		arg.Category,
 		arg.Amount,
 		arg.ExpenseDate,
+		arg.Remark,
 	)
-	var i Expense
+	var i CreateExpenseRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.Category,
 		&i.Amount,
 		&i.ExpenseDate,
+		&i.Remark,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const exportExpenses = `-- name: ExportExpenses :many
-SELECT
-  expense_date,
-  category,
-  amount,
-  created_at
-FROM expenses
-WHERE user_id = $1
-  AND expense_date >= $2
-  AND expense_date <  $3
-ORDER BY expense_date ASC, created_at ASC
-`
-
-type ExportExpensesParams struct {
-	UserID        uuid.UUID `json:"user_id"`
-	ExpenseDate   time.Time `json:"expense_date"`
-	ExpenseDate_2 time.Time `json:"expense_date_2"`
-}
-
-type ExportExpensesRow struct {
-	ExpenseDate time.Time `json:"expense_date"`
-	Category    string    `json:"category"`
-	Amount      int32     `json:"amount"`
-	CreatedAt   time.Time `json:"created_at"`
-}
-
-func (q *Queries) ExportExpenses(ctx context.Context, arg ExportExpensesParams) ([]ExportExpensesRow, error) {
-	rows, err := q.db.Query(ctx, exportExpenses, arg.UserID, arg.ExpenseDate, arg.ExpenseDate_2)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ExportExpensesRow
-	for rows.Next() {
-		var i ExportExpensesRow
-		if err := rows.Scan(
-			&i.ExpenseDate,
-			&i.Category,
-			&i.Amount,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listExpensesByUserAndRange = `-- name: ListExpensesByUserAndRange :many
-SELECT id, user_id, category, amount, expense_date, created_at
+SELECT id, user_id, category, amount, expense_date, created_at, remark
 FROM expenses
 WHERE user_id = $1
   AND expense_date >= $2
   AND expense_date <  $3
 ORDER BY
+  expense_date ASC,
   category ASC,
   created_at ASC
 `
@@ -141,6 +107,7 @@ func (q *Queries) ListExpensesByUserAndRange(ctx context.Context, arg ListExpens
 			&i.Amount,
 			&i.ExpenseDate,
 			&i.CreatedAt,
+			&i.Remark,
 		); err != nil {
 			return nil, err
 		}

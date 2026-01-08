@@ -46,6 +46,7 @@ func GetExpensesByCategory(ctx context.Context, deps deps.Deps, date int, month 
 			Category: e.Category,
 			Amount:   int(e.Amount),
 			Date:     e.ExpenseDate,
+			Remark:   &e.Remark.String,
 		})
 	}
 

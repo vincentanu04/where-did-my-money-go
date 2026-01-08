@@ -8,15 +8,17 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Expense struct {
-	ID          uuid.UUID `json:"id"`
-	UserID      uuid.UUID `json:"user_id"`
-	Category    string    `json:"category"`
-	Amount      int32     `json:"amount"`
-	ExpenseDate time.Time `json:"expense_date"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          uuid.UUID   `json:"id"`
+	UserID      uuid.UUID   `json:"user_id"`
+	Category    string      `json:"category"`
+	Amount      int32       `json:"amount"`
+	ExpenseDate time.Time   `json:"expense_date"`
+	CreatedAt   time.Time   `json:"created_at"`
+	Remark      pgtype.Text `json:"remark"`
 }
 
 type User struct {

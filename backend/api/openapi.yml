@@ -107,6 +107,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Expense"
+  /expenses/export:
+    post:
+      summary: Export expenses as CSV
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseExportRequest"
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
   /summary:
     get:
       summary: Category summary for a date
@@ -143,6 +160,8 @@ components:
         date:
           type: string
           format: date-time
+        remark:
+          type: string
     CreateExpense:
       type: object
       required:
@@ -156,6 +175,8 @@ components:
           type: integer
         date:
           $ref: "#/components/schemas/Date"
+        remark:
+          type: string
     CategorySummary:
       type: object
       required: [category, total]
@@ -176,6 +197,25 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Expense"
+    ExpenseExportRequest:
+      type: object
+      required: 
+        - type
+      properties:
+        type:
+          type: string
+          enum: [monthly, yearly, range]
+        monthOffset:
+          type: integer
+          description: 0 = current month, 1 = previous month
+        year:
+          type: integer
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
     Date:
       type: object
       required:

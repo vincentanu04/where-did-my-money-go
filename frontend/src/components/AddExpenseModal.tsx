@@ -11,11 +11,12 @@ import { useState } from "react"
 type Props = {
   category: string | null
   onClose: () => void
-  onSubmit: (amount: number) => void
+  onSubmit: (amount: number, remark?: string) => void
 }
 
 export function AddExpenseModal({ category, onClose, onSubmit }: Props) {
   const [amount, setAmount] = useState("")
+  const [remark, setRemark] = useState("")
 
   if (!category) return null
 
@@ -33,11 +34,17 @@ export function AddExpenseModal({ category, onClose, onSubmit }: Props) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
+          <Input
+            type="text"
+            placeholder="Remark"
+            value={remark}
+            onChange={(e) => setRemark(e.target.value)}
+          />
 
           <Button
             className="w-full"
             onClick={() => {
-              onSubmit(Number(amount))
+              onSubmit(Number(amount), remark)
               onClose()
             }}
           >

@@ -4,13 +4,14 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
 	sqlc "github.com/vincentanu04/where-did-my-money-go/internal/db/generated"
 	"github.com/vincentanu04/where-did-my-money-go/internal/deps"
 	"github.com/vincentanu04/where-did-my-money-go/internal/server/middleware"
 )
 
-func PostExpensesCreate(ctx context.Context, deps deps.Deps, date oapi.Date, amount int, category string) (*oapi.Expense, error) {
+func PostExpensesCreate(ctx context.Context, deps deps.Deps, date oapi.Date, amount int, category string, remark *string) (*oapi.Expense, error) {
 	db := deps.DB
 	userID := middleware.UserIDFromContext(ctx)
 
@@ -27,6 +28,7 @@ func PostExpensesCreate(ctx context.Context, deps deps.Deps, date oapi.Date, amo
 		Category:    category,
 		Amount:      int32(amount),
 		ExpenseDate: expenseDate,
+		Remark:      pgtype.Text{String: *remark, Valid: remark != nil},
 	})
 	if err != nil {
 		return nil, err

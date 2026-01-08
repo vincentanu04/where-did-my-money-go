@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -14,6 +15,13 @@ import (
 	"github.com/oapi-codegen/runtime"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+)
+
+// Defines values for ExpenseExportRequestType.
+const (
+	Monthly ExpenseExportRequestType = "monthly"
+	Range   ExpenseExportRequestType = "range"
+	Yearly  ExpenseExportRequestType = "yearly"
 )
 
 // CategorySummary defines model for CategorySummary.
@@ -24,9 +32,10 @@ type CategorySummary struct {
 
 // CreateExpense defines model for CreateExpense.
 type CreateExpense struct {
-	Amount   int    `json:"amount"`
-	Category string `json:"category"`
-	Date     Date   `json:"date"`
+	Amount   int     `json:"amount"`
+	Category string  `json:"category"`
+	Date     Date    `json:"date"`
+	Remark   *string `json:"remark,omitempty"`
 }
 
 // Date defines model for Date.
@@ -42,7 +51,22 @@ type Expense struct {
 	Category string             `json:"category"`
 	Date     time.Time          `json:"date"`
 	Id       openapi_types.UUID `json:"id"`
+	Remark   *string            `json:"remark,omitempty"`
 }
+
+// ExpenseExportRequest defines model for ExpenseExportRequest.
+type ExpenseExportRequest struct {
+	From *openapi_types.Date `json:"from,omitempty"`
+
+	// MonthOffset 0 = current month, 1 = previous month
+	MonthOffset *int                     `json:"monthOffset,omitempty"`
+	To          *openapi_types.Date      `json:"to,omitempty"`
+	Type        ExpenseExportRequestType `json:"type"`
+	Year        *int                     `json:"year,omitempty"`
+}
+
+// ExpenseExportRequestType defines model for ExpenseExportRequest.Type.
+type ExpenseExportRequestType string
 
 // ExpensesByCategory defines model for ExpensesByCategory.
 type ExpensesByCategory struct {
@@ -76,6 +100,9 @@ type PostAuthRegisterJSONRequestBody PostAuthRegisterJSONBody
 // PostExpensesCreateJSONRequestBody defines body for PostExpensesCreate for application/json ContentType.
 type PostExpensesCreateJSONRequestBody = CreateExpense
 
+// PostExpensesExportJSONRequestBody defines body for PostExpensesExport for application/json ContentType.
+type PostExpensesExportJSONRequestBody = ExpenseExportRequest
+
 // PostExpensesListJSONRequestBody defines body for PostExpensesList for application/json ContentType.
 type PostExpensesListJSONRequestBody = Date
 
@@ -96,6 +123,9 @@ type ServerInterface interface {
 	// Create an expense
 	// (POST /expenses/create)
 	PostExpensesCreate(w http.ResponseWriter, r *http.Request)
+	// Export expenses as CSV
+	// (POST /expenses/export)
+	PostExpensesExport(w http.ResponseWriter, r *http.Request)
 	// List expenses for a date
 	// (POST /expenses/list)
 	PostExpensesList(w http.ResponseWriter, r *http.Request)
@@ -133,6 +163,12 @@ func (_ Unimplemented) PostAuthRegister(w http.ResponseWriter, r *http.Request) 
 // Create an expense
 // (POST /expenses/create)
 func (_ Unimplemented) PostExpensesCreate(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Export expenses as CSV
+// (POST /expenses/export)
+func (_ Unimplemented) PostExpensesExport(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -218,6 +254,20 @@ func (siw *ServerInterfaceWrapper) PostExpensesCreate(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostExpensesCreate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostExpensesExport operation middleware
+func (siw *ServerInterfaceWrapper) PostExpensesExport(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostExpensesExport(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -404,6 +454,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/expenses/create", wrapper.PostExpensesCreate)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/expenses/export", wrapper.PostExpensesExport)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/expenses/list", wrapper.PostExpensesList)
 	})
 	r.Group(func(r chi.Router) {
@@ -526,6 +579,33 @@ func (response PostExpensesCreate201JSONResponse) VisitPostExpensesCreateRespons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type PostExpensesExportRequestObject struct {
+	Body *PostExpensesExportJSONRequestBody
+}
+
+type PostExpensesExportResponseObject interface {
+	VisitPostExpensesExportResponse(w http.ResponseWriter) error
+}
+
+type PostExpensesExport200TextcsvResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response PostExpensesExport200TextcsvResponse) VisitPostExpensesExportResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "text/csv")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
 type PostExpensesListRequestObject struct {
 	Body *PostExpensesListJSONRequestBody
 }
@@ -577,6 +657,9 @@ type StrictServerInterface interface {
 	// Create an expense
 	// (POST /expenses/create)
 	PostExpensesCreate(ctx context.Context, request PostExpensesCreateRequestObject) (PostExpensesCreateResponseObject, error)
+	// Export expenses as CSV
+	// (POST /expenses/export)
+	PostExpensesExport(ctx context.Context, request PostExpensesExportRequestObject) (PostExpensesExportResponseObject, error)
 	// List expenses for a date
 	// (POST /expenses/list)
 	PostExpensesList(ctx context.Context, request PostExpensesListRequestObject) (PostExpensesListResponseObject, error)
@@ -748,6 +831,37 @@ func (sh *strictHandler) PostExpensesCreate(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostExpensesCreateResponseObject); ok {
 		if err := validResponse.VisitPostExpensesCreateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostExpensesExport operation middleware
+func (sh *strictHandler) PostExpensesExport(w http.ResponseWriter, r *http.Request) {
+	var request PostExpensesExportRequestObject
+
+	var body PostExpensesExportJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostExpensesExport(ctx, request.(PostExpensesExportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostExpensesExport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostExpensesExportResponseObject); ok {
+		if err := validResponse.VisitPostExpensesExportResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
