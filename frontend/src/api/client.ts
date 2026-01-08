@@ -6,6 +6,10 @@ const injectedRtkApi = api
   })
   .injectEndpoints({
     endpoints: (build) => ({
+      getAuthMe: build.query<GetAuthMeApiResponse, GetAuthMeApiArg>({
+        query: () => ({ url: `/auth/me` }),
+        providesTags: [],
+      }),
       postAuthRegister: build.mutation<
         PostAuthRegisterApiResponse,
         PostAuthRegisterApiArg
@@ -70,6 +74,8 @@ const injectedRtkApi = api
     overrideExisting: false,
   });
 export { injectedRtkApi as enhancedApi };
+export type GetAuthMeApiResponse = unknown;
+export type GetAuthMeApiArg = void;
 export type PostAuthRegisterApiResponse = unknown;
 export type PostAuthRegisterApiArg = {
   body: {
@@ -125,6 +131,7 @@ export type CategorySummary = {
   total: number;
 };
 export const {
+  useGetAuthMeQuery,
   usePostAuthRegisterMutation,
   usePostAuthLoginMutation,
   usePostAuthLogoutMutation,

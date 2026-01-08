@@ -28,7 +28,6 @@ func Auth(next http.Handler) http.Handler {
 			return
 		}
 
-		log.Println("Auth middleware")
 		cookie, err := r.Cookie(COOKIE_NAME)
 		if err != nil {
 			log.Println("HERE 1", err)

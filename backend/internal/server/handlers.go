@@ -41,6 +41,16 @@ func (s *Server) GetSummary(ctx context.Context, request oapi.GetSummaryRequestO
 	), nil
 }
 
+// (GET /auth/me)
+func (s *Server) GetAuthMe(ctx context.Context, request oapi.GetAuthMeRequestObject) (oapi.GetAuthMeResponseObject, error) {
+	res, err := app_service_auth.GetAuthMe(ctx, s.deps)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 // (POST /auth/login)
 func (s *Server) PostAuthLogin(ctx context.Context, request oapi.PostAuthLoginRequestObject) (oapi.PostAuthLoginResponseObject, error) {
 	res, err := app_service_auth.PostAuthLogin(ctx, s.deps, request.Body.Email, request.Body.Password)

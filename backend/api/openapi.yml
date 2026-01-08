@@ -7,6 +7,14 @@ servers:
   - url: http://localhost:8080
 
 paths:
+  /auth/me:
+    get:
+      summary: Check authentication status
+      responses:
+        "204":
+          description: Authenticated
+        "401":
+          description: Not authenticated
   /auth/register:
     post:
       summary: Register a new user

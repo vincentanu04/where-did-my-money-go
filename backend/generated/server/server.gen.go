@@ -87,6 +87,9 @@ type ServerInterface interface {
 
 	// (POST /auth/logout)
 	PostAuthLogout(w http.ResponseWriter, r *http.Request)
+	// Check authentication status
+	// (GET /auth/me)
+	GetAuthMe(w http.ResponseWriter, r *http.Request)
 	// Register a new user
 	// (POST /auth/register)
 	PostAuthRegister(w http.ResponseWriter, r *http.Request)
@@ -112,6 +115,12 @@ func (_ Unimplemented) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 
 // (POST /auth/logout)
 func (_ Unimplemented) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Check authentication status
+// (GET /auth/me)
+func (_ Unimplemented) GetAuthMe(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -167,6 +176,20 @@ func (siw *ServerInterfaceWrapper) PostAuthLogout(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAuthLogout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAuthMe operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthMe(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthMe(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -372,6 +395,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/auth/me", wrapper.GetAuthMe)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
 	})
 	r.Group(func(r chi.Router) {
@@ -427,6 +453,29 @@ type PostAuthLogout204Response struct {
 func (response PostAuthLogout204Response) VisitPostAuthLogoutResponse(w http.ResponseWriter) error {
 	w.Header().Set("Set-Cookie", fmt.Sprint(response.Headers.SetCookie))
 	w.WriteHeader(204)
+	return nil
+}
+
+type GetAuthMeRequestObject struct {
+}
+
+type GetAuthMeResponseObject interface {
+	VisitGetAuthMeResponse(w http.ResponseWriter) error
+}
+
+type GetAuthMe204Response struct {
+}
+
+func (response GetAuthMe204Response) VisitGetAuthMeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type GetAuthMe401Response struct {
+}
+
+func (response GetAuthMe401Response) VisitGetAuthMeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(401)
 	return nil
 }
 
@@ -519,6 +568,9 @@ type StrictServerInterface interface {
 
 	// (POST /auth/logout)
 	PostAuthLogout(ctx context.Context, request PostAuthLogoutRequestObject) (PostAuthLogoutResponseObject, error)
+	// Check authentication status
+	// (GET /auth/me)
+	GetAuthMe(ctx context.Context, request GetAuthMeRequestObject) (GetAuthMeResponseObject, error)
 	// Register a new user
 	// (POST /auth/register)
 	PostAuthRegister(ctx context.Context, request PostAuthRegisterRequestObject) (PostAuthRegisterResponseObject, error)
@@ -610,6 +662,30 @@ func (sh *strictHandler) PostAuthLogout(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostAuthLogoutResponseObject); ok {
 		if err := validResponse.VisitPostAuthLogoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAuthMe operation middleware
+func (sh *strictHandler) GetAuthMe(w http.ResponseWriter, r *http.Request) {
+	var request GetAuthMeRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAuthMe(ctx, request.(GetAuthMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAuthMe")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAuthMeResponseObject); ok {
+		if err := validResponse.VisitGetAuthMeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

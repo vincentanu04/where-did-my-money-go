@@ -6,7 +6,9 @@ const categories = [
   "Lunch",
   "Dinner",
   "Snack",
-  "Utilities",
+  "Entertainment",
+  "Shopping",
+  "Exercise",
 ]
 
 export function CategoryGrid({ onSelect }: { onSelect: (c: string) => void }) {

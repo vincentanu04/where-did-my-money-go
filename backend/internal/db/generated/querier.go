@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (Expense, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
+	ExportExpenses(ctx context.Context, arg ExportExpensesParams) ([]ExportExpensesRow, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	ListExpensesByUserAndRange(ctx context.Context, arg ListExpensesByUserAndRangeParams) ([]Expense, error)
 }

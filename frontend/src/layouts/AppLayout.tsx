@@ -6,14 +6,12 @@ export default function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const isHistory = location.pathname === "/history"
-
   return (
     <div className="min-h-svh flex justify-center">
       <div className="w-full max-w-md lg:max-w-4xl px-4 pb-6">
         {/* HEADER (fixed height, always present) */}
         <header className="h-14 flex items-center gap-2">
-          {isHistory ? (
+          {location.pathname !== "/" && location.pathname !== "/login" && location.pathname !== "/register" ? (
             <Button
               variant="ghost"
               size="icon"
@@ -27,7 +25,7 @@ export default function AppLayout() {
           )}
 
           <span className="text-sm text-muted-foreground">
-            {isHistory ? "History" : "Home"}
+            {location.pathname === "/" ? "Home" : location.pathname.slice(1).charAt(0).toUpperCase() + location.pathname.slice(2)}
           </span>
         </header>
 

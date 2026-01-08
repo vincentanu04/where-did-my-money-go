@@ -2,6 +2,9 @@ include .env
 
 .PHONY: gen gen-go gen-ts tidy migrate-up migrate-down sqlc-codegen
 
+run:
+	go run main.go
+	
 ## Generate everything
 gen: gen-go gen-ts tidy
 

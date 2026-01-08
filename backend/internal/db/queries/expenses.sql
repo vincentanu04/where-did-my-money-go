@@ -6,7 +6,7 @@ WHERE user_id = $1
   AND expense_date <  $3
 ORDER BY
   category ASC,
-  created_at DESC;
+  created_at ASC;
 
 -- name: CreateExpense :one
 INSERT INTO expenses (
@@ -25,3 +25,15 @@ RETURNING
   amount,
   expense_date,
   created_at;
+
+-- name: ExportExpenses :many
+SELECT
+  expense_date,
+  category,
+  amount,
+  created_at
+FROM expenses
+WHERE user_id = $1
+  AND expense_date >= $2
+  AND expense_date <  $3
+ORDER BY expense_date ASC, created_at ASC;

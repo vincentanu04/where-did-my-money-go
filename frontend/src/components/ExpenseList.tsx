@@ -1,8 +1,8 @@
+import type { ExpensesByCategory } from '@/api/client'
 import { Card } from "@/components/ui/card"
-import type { Expense } from "@/types/expense"
 
 type Props = {
-  expenses: Expense[]
+  expenses: ExpensesByCategory[]
 }
 
 export const ExpenseList = ({ expenses }: Props) => {
@@ -15,11 +15,32 @@ export const ExpenseList = ({ expenses }: Props) => {
   }
 
   return (
-    <Card className="p-4 space-y-3">
-      {expenses.map(e => (
-        <div key={e.id} className="flex justify-between">
-          <span>{e.category}</span>
-          <span>¥{e.amount}</span>
+    <Card className="p-4 space-y-4">
+      {expenses.map(category => (
+        <div key={category.category} className="space-y-2">
+          {/* Category header */}
+          <div className="flex justify-between font-medium">
+            <span>{category.category}</span>
+            <span>
+              ¥
+              {category.expenses.reduce(
+                (sum, e) => sum + e.amount,
+                0
+              )}
+            </span>
+          </div>
+
+          {/* Expenses */}
+          <div className="space-y-1 pl-4 text-sm">
+            {category.expenses.map(expense => (
+              <div
+                key={expense.id}
+                className="flex justify-between text-muted-foreground"
+              >
+                <span>¥{expense.amount}</span>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </Card>

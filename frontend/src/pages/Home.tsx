@@ -1,36 +1,22 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { DateHeader } from "@/components/DateHeader"
 import { CategoryGrid } from "@/components/CategoryGrid"
 import { AddExpenseModal } from "@/components/AddExpenseModal"
 import { FabHistory } from "@/components/FabHistory"
-import { useSelectedDate } from "@/hooks/useSelectedDate"
-import { useGetExpensesQuery, usePostAuthLoginMutation, usePostExpensesMutation, type CreateExpense } from '@/api/client'
+import { useHomeDate } from "@/hooks/useHomeDate"
+import { usePostExpensesCreateMutation, type CreateExpense } from '@/api/client'
 
 export default function Home() {
-  const { date, prevDay, nextDay } = useSelectedDate();
+  const { date, oapiDate, prevDay, nextDay } = useHomeDate()
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const { data: expensesData } = useGetExpensesQuery({
-    date: date.toISOString().slice(0, 10),
-  });
 
-  const [postLogin, _postLoginRes] =  usePostAuthLoginMutation();
-
-  useEffect(() => {
-    postLogin({
-      body: {
-        email: "edinende",
-        password: 'vincent123',
-      }
-    });
-  }, [postLogin]);
-
-  const [postExpense, _postExpenseRes] =  usePostExpensesMutation();
+  const [postExpense, _postExpenseRes] =  usePostExpensesCreateMutation();
   
   const handleAddExpense = (category: string, amount: number) => {
     const newExpense: CreateExpense = {
       category,
       amount,
-      date: date.toISOString().slice(0, 10),
+      date: oapiDate,
     };
     
     postExpense({createExpense: newExpense});

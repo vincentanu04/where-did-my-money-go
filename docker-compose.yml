@@ -1,7 +1,5 @@
 volumes:
-  node_modules_frontend:
-  vite_cache:
-  pgdata:
+  pgdata_wdmmg:
 
 services:
   # portgenius-backend:
@@ -49,6 +47,6 @@ services:
       POSTGRES_PASSWORD: wdmmg_password
       POSTGRES_DB: wdmmg_db
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_wdmmg:/var/lib/postgresql/data
     ports:
       - "5432:5432"
