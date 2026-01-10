@@ -19,11 +19,11 @@ const COOKIE_NAME = "access_token"
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// PUBLIC ROUTES
-		if r.Method == http.MethodPost && r.URL.Path == "/auth/login" {
+		if r.Method == http.MethodPost && r.URL.Path == "/api/auth/login" {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if r.Method == http.MethodPost && r.URL.Path == "/auth/register" {
+		if r.Method == http.MethodPost && r.URL.Path == "/api/auth/register" {
 			next.ServeHTTP(w, r)
 			return
 		}

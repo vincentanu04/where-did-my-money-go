@@ -1,0 +1,35 @@
+# fly.toml app configuration file generated for where-did-my-money-go on 2026-01-10T20:40:06+09:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'where-did-my-money-go'
+primary_region = 'nrt'
+
+[build]
+  [build.args]
+    VITE_API_URL = "https://where-did-my-money-go.fly.dev/api"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  size = 'shared-cpu-1x'
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+  
+  # Expose HTTP and HTTPS ports
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443

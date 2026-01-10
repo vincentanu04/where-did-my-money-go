@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -22,8 +23,9 @@ func main() {
 	router := chi.NewRouter()
 
 	router.Use(cors.Handler(corsOptions()))
-	router.Use(middleware.Auth)
-	router.Use(middleware.RateLimit)
+	apiRouter := chi.NewRouter()
+	apiRouter.Use(middleware.Auth)
+	apiRouter.Use(middleware.RateLimit)
 
 	ctx := context.Background()
 	pool, err := db.New(ctx)
@@ -39,10 +41,28 @@ func main() {
 		oapi.StrictHTTPServerOptions{},
 	)
 
-	server := oapi.HandlerFromMux(handler, router)
+	oapi.HandlerFromMux(handler, apiRouter)
+
+	router.Mount("/api", apiRouter)
+
+	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		// Only handle non-API paths
+		if strings.HasPrefix(r.URL.Path, "/api") {
+			http.NotFound(w, r)
+			return
+		}
+
+		path := "./frontend/dist" + r.URL.Path
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			http.ServeFile(w, r, "./frontend/dist/index.html")
+			return
+		}
+
+		http.ServeFile(w, r, path)
+	})
 
 	log.Println("Listening on :8080")
-	http.ListenAndServe(":8080", server)
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
 func corsOptions() cors.Options {

@@ -26,8 +26,8 @@ export default function Register() {
       await register({ body: { email, password } }).unwrap()
       dispatch(loggedIn());
       navigate("/")
-    } catch {
-      setError("Email already exists")
+    } catch (err) {
+      setError("Error occured, please try again.")
     }
   }
 
