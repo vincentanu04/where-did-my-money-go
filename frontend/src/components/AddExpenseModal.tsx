@@ -47,6 +47,7 @@ export function AddExpenseModal({ category, onClose, onSubmit }: Props) {
               onSubmit(Number(amount), remark)
               onClose()
             }}
+            disabled={!amount}
           >
             Enter
           </Button>

@@ -160,7 +160,7 @@ func buildMonthlyCSV(
 
 	// ---- Header row: add "Day" + "Remark" column
 	header := append([]string{"", "Date"}, categories...)
-	header = append(header, "TOTAL", "Remark")
+	header = append(header, "TOTAL", "Remarks")
 	if err := w.Write(header); err != nil {
 		return nil, 0, err
 	}
@@ -240,7 +240,6 @@ func buildMonthlyCSV(
 
 	// Total column formula in grand total row
 	totalCol := string('C' + len(categories)) // TOTAL column
-	totalRow = append(totalRow, "")           // Remark column empty for grand total
 	totalRow = append(totalRow, fmt.Sprintf("=SUM(%s%d:%s%d)", totalCol, preDataRows+1, totalCol, preDataRows+daysInMonth))
 
 	_ = w.Write(totalRow)

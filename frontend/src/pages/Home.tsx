@@ -31,7 +31,7 @@ export default function Home() {
         onNext={nextDay}
       />
       <CategoryGrid onSelect={setSelectedCategory} />
-      <AddExpenseModal
+      {selectedCategory && <AddExpenseModal
         category={selectedCategory}
         onClose={() => setSelectedCategory(null)}
         onSubmit={(amount, remark) => {
@@ -39,7 +39,7 @@ export default function Home() {
 
           handleAddExpense(selectedCategory, amount, remark);
         }}
-      />
+      />}
       <FabHistory />
     </>
   )
