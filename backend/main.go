@@ -23,6 +23,7 @@ func main() {
 
 	router.Use(cors.Handler(corsOptions()))
 	router.Use(middleware.Auth)
+	router.Use(middleware.RateLimit)
 
 	ctx := context.Background()
 	pool, err := db.New(ctx)
