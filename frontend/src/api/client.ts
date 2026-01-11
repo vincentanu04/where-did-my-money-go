@@ -85,7 +85,7 @@ const injectedRtkApi = api
     overrideExisting: false,
   });
 export { injectedRtkApi as enhancedApi };
-export type GetAuthMeApiResponse = unknown;
+export type GetAuthMeApiResponse = /** status 200 Authenticated user */ User;
 export type GetAuthMeApiArg = void;
 export type PostAuthRegisterApiResponse = unknown;
 export type PostAuthRegisterApiArg = {
@@ -120,6 +120,11 @@ export type GetSummaryApiResponse =
   /** status 200 Summary per category */ CategorySummary[];
 export type GetSummaryApiArg = {
   date: string;
+};
+export type User = {
+  id: string;
+  email: string;
+  createdAt: string;
 };
 export type Expense = {
   id: string;

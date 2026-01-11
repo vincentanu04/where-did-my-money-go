@@ -74,6 +74,13 @@ type ExpensesByCategory struct {
 	Expenses []Expense `json:"expenses"`
 }
 
+// User defines model for User.
+type User struct {
+	CreatedAt string             `json:"createdAt"`
+	Email     string             `json:"email"`
+	Id        openapi_types.UUID `json:"id"`
+}
+
 // PostAuthLoginJSONBody defines parameters for PostAuthLogin.
 type PostAuthLoginJSONBody struct {
 	Email    string `json:"email"`
@@ -516,12 +523,13 @@ type GetAuthMeResponseObject interface {
 	VisitGetAuthMeResponse(w http.ResponseWriter) error
 }
 
-type GetAuthMe204Response struct {
-}
+type GetAuthMe200JSONResponse User
 
-func (response GetAuthMe204Response) VisitGetAuthMeResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
+func (response GetAuthMe200JSONResponse) VisitGetAuthMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type GetAuthMe401Response struct {

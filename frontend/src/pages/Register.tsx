@@ -1,20 +1,15 @@
-// pages/Register.tsx
 import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { usePostAuthRegisterMutation } from '@/api/client'
-import { useDispatch } from 'react-redux'
-import { loggedIn } from '@/store/authSlice'
 
 export default function Register() {
-  const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const dispatch = useDispatch();
 
   const [register, { isLoading }] = usePostAuthRegisterMutation()
 
@@ -24,8 +19,7 @@ export default function Register() {
 
     try {
       await register({ body: { email, password } }).unwrap()
-      dispatch(loggedIn());
-      navigate("/")
+      window.location.href = "/";
     } catch (err) {
       setError("Error occured, please try again.")
     }

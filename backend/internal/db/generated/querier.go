@@ -6,12 +6,15 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (CreateExpenseRow, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
+	GetUserById(ctx context.Context, id uuid.UUID) (User, error)
 	ListExpensesByUserAndRange(ctx context.Context, arg ListExpensesByUserAndRangeParams) ([]Expense, error)
 }
 
