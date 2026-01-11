@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Toaster } from '@/components/ui/sonner'
 
 export default function AppLayout() {
   const location = useLocation()
@@ -32,6 +33,7 @@ export default function AppLayout() {
         {/* PAGE CONTENT */}
         <main className="space-y-6">
           <Outlet />
+          <Toaster position="bottom-center" />
         </main>
       </div>
     </div>

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 
@@ -30,7 +29,6 @@ func Auth(next http.Handler) http.Handler {
 
 		cookie, err := r.Cookie(COOKIE_NAME)
 		if err != nil {
-			log.Println("HERE 1", err)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -44,7 +42,6 @@ func Auth(next http.Handler) http.Handler {
 		)
 
 		if err != nil || !token.Valid {
-			log.Println("HERE 2")
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}

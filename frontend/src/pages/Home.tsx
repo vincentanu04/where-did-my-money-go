@@ -5,6 +5,7 @@ import { AddExpenseModal } from "@/components/AddExpenseModal"
 import { FabHistory } from "@/components/FabHistory"
 import { useHomeDate } from "@/hooks/useHomeDate"
 import { usePostExpensesCreateMutation, type CreateExpense } from '@/api/client'
+import { toast } from 'sonner'
 
 export default function Home() {
   const { date, oapiDate, prevDay, nextDay } = useHomeDate()
@@ -12,7 +13,7 @@ export default function Home() {
 
   const [postExpense, _postExpenseRes] =  usePostExpensesCreateMutation();
   
-  const handleAddExpense = (category: string, amount: number, remark?: string) => {
+  const handleAddExpense = async (category: string, amount: number, remark?: string) => {
     const newExpense: CreateExpense = {
       category,
       amount,
@@ -20,7 +21,12 @@ export default function Home() {
       remark,
     };
     
-    postExpense({createExpense: newExpense});
+    try {
+      await postExpense({ createExpense: newExpense }).unwrap();
+      toast.success('Expense added successfully');
+    } catch (err) {
+      toast.error('Failed to add expense');
+    }
   };
 
   return (

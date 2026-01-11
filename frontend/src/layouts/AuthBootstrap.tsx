@@ -5,7 +5,7 @@ import { loggedIn, loggedOut } from '@/store/authSlice'
 
 export default function AuthBootstrap({ children }: PropsWithChildren) {
   const dispatch = useDispatch()
-  const { isSuccess, isError, isFetching } = useGetAuthMeQuery()
+  const { isSuccess, isError, isFetching } = useGetAuthMeQuery();
 
   useEffect(() => {
     if (isSuccess) dispatch(loggedIn())

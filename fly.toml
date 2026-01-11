@@ -20,16 +20,4 @@ primary_region = 'nrt'
 
 [[vm]]
   size = 'shared-cpu-1x'
-
-[[services]]
-  internal_port = 8080
-  protocol = "tcp"
   
-  # Expose HTTP and HTTPS ports
-  [[services.ports]]
-    handlers = ["http"]
-    port = 80
-
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443

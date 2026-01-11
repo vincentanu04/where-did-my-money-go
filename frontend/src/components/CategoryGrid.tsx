@@ -1,6 +1,7 @@
 import { CategoryCard } from "./CategoryCard"
 
 const categories = [
+  "Cooking Ingredients",
   "Groceries",
   "Transport",
   "Lunch",
@@ -9,6 +10,7 @@ const categories = [
   "Entertainment",
   "Shopping",
   "Exercise",
+  "Others",
 ]
 
 export function CategoryGrid({ onSelect }: { onSelect: (c: string) => void }) {

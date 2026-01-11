@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	chi_middleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
@@ -24,6 +25,7 @@ func main() {
 
 	router.Use(cors.Handler(corsOptions()))
 	apiRouter := chi.NewRouter()
+	router.Use(chi_middleware.Recoverer)
 	apiRouter.Use(middleware.Auth)
 	apiRouter.Use(middleware.RateLimit)
 
