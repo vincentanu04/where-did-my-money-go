@@ -17,6 +17,7 @@ import (
 	"github.com/vincentanu04/where-did-my-money-go/internal/deps"
 	"github.com/vincentanu04/where-did-my-money-go/internal/server"
 	"github.com/vincentanu04/where-did-my-money-go/internal/server/middleware"
+	"github.com/vincentanu04/where-did-my-money-go/jobs"
 )
 
 func main() {
@@ -35,6 +36,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer pool.Close()
+	jobs.KeepDBAlive(ctx, pool)
 	queries := sqlc.New(pool)
 
 	handler := oapi.NewStrictHandlerWithOptions(
