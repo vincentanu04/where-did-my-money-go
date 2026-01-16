@@ -74,6 +74,12 @@ type ExpensesByCategory struct {
 	Expenses []Expense `json:"expenses"`
 }
 
+// UpdateExpense defines model for UpdateExpense.
+type UpdateExpense struct {
+	Amount *int    `json:"amount,omitempty"`
+	Remark *string `json:"remark,omitempty"`
+}
+
 // User defines model for User.
 type User struct {
 	CreatedAt string             `json:"createdAt"`
@@ -113,6 +119,9 @@ type PostExpensesExportJSONRequestBody = ExpenseExportRequest
 // PostExpensesListJSONRequestBody defines body for PostExpensesList for application/json ContentType.
 type PostExpensesListJSONRequestBody = Date
 
+// PutExpensesIdJSONRequestBody defines body for PutExpensesId for application/json ContentType.
+type PutExpensesIdJSONRequestBody = UpdateExpense
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
@@ -136,6 +145,12 @@ type ServerInterface interface {
 	// List expenses for a date
 	// (POST /expenses/list)
 	PostExpensesList(w http.ResponseWriter, r *http.Request)
+	// Delete an expense
+	// (DELETE /expenses/{id})
+	DeleteExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Update an expense
+	// (PUT /expenses/{id})
+	PutExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Category summary for a date
 	// (GET /summary)
 	GetSummary(w http.ResponseWriter, r *http.Request, params GetSummaryParams)
@@ -182,6 +197,18 @@ func (_ Unimplemented) PostExpensesExport(w http.ResponseWriter, r *http.Request
 // List expenses for a date
 // (POST /expenses/list)
 func (_ Unimplemented) PostExpensesList(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete an expense
+// (DELETE /expenses/{id})
+func (_ Unimplemented) DeleteExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update an expense
+// (PUT /expenses/{id})
+func (_ Unimplemented) PutExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -289,6 +316,56 @@ func (siw *ServerInterfaceWrapper) PostExpensesList(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostExpensesList(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteExpensesId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteExpensesId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteExpensesId(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutExpensesId operation middleware
+func (siw *ServerInterfaceWrapper) PutExpensesId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutExpensesId(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -467,6 +544,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/expenses/list", wrapper.PostExpensesList)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/expenses/{id}", wrapper.DeleteExpensesId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/expenses/{id}", wrapper.PutExpensesId)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/summary", wrapper.GetSummary)
 	})
 
@@ -631,6 +714,55 @@ func (response PostExpensesList200JSONResponse) VisitPostExpensesListResponse(w 
 	return json.NewEncoder(w).Encode(response)
 }
 
+type DeleteExpensesIdRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteExpensesIdResponseObject interface {
+	VisitDeleteExpensesIdResponse(w http.ResponseWriter) error
+}
+
+type DeleteExpensesId204Response struct {
+}
+
+func (response DeleteExpensesId204Response) VisitDeleteExpensesIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteExpensesId404Response struct {
+}
+
+func (response DeleteExpensesId404Response) VisitDeleteExpensesIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type PutExpensesIdRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PutExpensesIdJSONRequestBody
+}
+
+type PutExpensesIdResponseObject interface {
+	VisitPutExpensesIdResponse(w http.ResponseWriter) error
+}
+
+type PutExpensesId204Response struct {
+}
+
+func (response PutExpensesId204Response) VisitPutExpensesIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PutExpensesId404Response struct {
+}
+
+func (response PutExpensesId404Response) VisitPutExpensesIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
 type GetSummaryRequestObject struct {
 	Params GetSummaryParams
 }
@@ -671,6 +803,12 @@ type StrictServerInterface interface {
 	// List expenses for a date
 	// (POST /expenses/list)
 	PostExpensesList(ctx context.Context, request PostExpensesListRequestObject) (PostExpensesListResponseObject, error)
+	// Delete an expense
+	// (DELETE /expenses/{id})
+	DeleteExpensesId(ctx context.Context, request DeleteExpensesIdRequestObject) (DeleteExpensesIdResponseObject, error)
+	// Update an expense
+	// (PUT /expenses/{id})
+	PutExpensesId(ctx context.Context, request PutExpensesIdRequestObject) (PutExpensesIdResponseObject, error)
 	// Category summary for a date
 	// (GET /summary)
 	GetSummary(ctx context.Context, request GetSummaryRequestObject) (GetSummaryResponseObject, error)
@@ -901,6 +1039,65 @@ func (sh *strictHandler) PostExpensesList(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostExpensesListResponseObject); ok {
 		if err := validResponse.VisitPostExpensesListResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteExpensesId operation middleware
+func (sh *strictHandler) DeleteExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteExpensesIdRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteExpensesId(ctx, request.(DeleteExpensesIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteExpensesId")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteExpensesIdResponseObject); ok {
+		if err := validResponse.VisitDeleteExpensesIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutExpensesId operation middleware
+func (sh *strictHandler) PutExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PutExpensesIdRequestObject
+
+	request.Id = id
+
+	var body PutExpensesIdJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutExpensesId(ctx, request.(PutExpensesIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutExpensesId")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutExpensesIdResponseObject); ok {
+		if err := validResponse.VisitPutExpensesIdResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

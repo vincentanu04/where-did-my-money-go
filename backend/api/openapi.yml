@@ -111,6 +111,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Expense"
+  /expenses/{id}:
+    put:
+      summary: Update an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExpense"
+      responses:
+        "204":
+          description: Updated expense
+        "404":
+          description: Expense not found
+    delete:
+      summary: Delete an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Expense not found
   /expenses/export:
     post:
       summary: Export expenses as CSV
@@ -179,6 +214,13 @@ components:
           type: integer
         date:
           $ref: "#/components/schemas/Date"
+        remark:
+          type: string
+    UpdateExpense:
+      type: object
+      properties:
+        amount:
+          type: integer
         remark:
           type: string
     CategorySummary:

@@ -13,9 +13,12 @@ import (
 type Querier interface {
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (CreateExpenseRow, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
+	DeleteExpense(ctx context.Context, id uuid.UUID) error
+	GetExpenseByIDAndUser(ctx context.Context, arg GetExpenseByIDAndUserParams) (Expense, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	GetUserById(ctx context.Context, id uuid.UUID) (User, error)
 	ListExpensesByUserAndRange(ctx context.Context, arg ListExpensesByUserAndRangeParams) ([]Expense, error)
+	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (UpdateExpenseRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -24,6 +24,11 @@ export function DateHeader({ date, onPrev, onNext }: Props) {
       </Button>
 
       <div className="text-center">
+        <div className="text-sm text-muted-foreground">
+          {date.toLocaleDateString("en-GB", {
+            weekday: "long",
+          })}
+        </div>
         <div className="font-semibold">
           {date.toLocaleDateString("en-GB", {
             day: "2-digit",

@@ -24,11 +24,15 @@ export default function History() {
   const [getExpenses, { isLoading }] = usePostExpensesListMutation()
   const [expenses, setExpenses] = useState<ExpensesByCategory[]>([])
 
-  useEffect(() => {
+  const fetchExpenses = () => {
     getExpenses({ date: oapiDate })
       .unwrap()
       .then(setExpenses)
       .catch(() => toast.error('Failed to fetch expenses'))
+  }
+
+  useEffect(() => {
+    fetchExpenses()
   }, [date])
 
   return (
@@ -39,7 +43,7 @@ export default function History() {
         onNext={nextDay}
       />
       <div className="flex-1 overflow-y-auto p-4 pb-24">
-        <ExpenseList expenses={expenses} isLoading={isLoading} />
+        <ExpenseList expenses={expenses} isLoading={isLoading} onChanged={fetchExpenses} />
       </div>
       <div className="fixed bottom-0 left-0 right-0 border-t bg-background p-4">
         <ExportCsvButton />

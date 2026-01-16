@@ -100,3 +100,34 @@ func (s *Server) PostAuthRegister(ctx context.Context, request oapi.PostAuthRegi
 
 	return res, nil
 }
+
+func (s *Server) PutExpensesId(
+	ctx context.Context,
+	request oapi.PutExpensesIdRequestObject,
+) (oapi.PutExpensesIdResponseObject, error) {
+	err := app_service_expenses.UpdateExpense(
+		ctx,
+		s.deps,
+		request.Id,
+		request.Body.Amount,
+		request.Body.Remark,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return oapi.PutExpensesId204Response{}, nil
+}
+
+// (DELETE /expenses/{id})
+func (s *Server) DeleteExpensesId(
+	ctx context.Context,
+	request oapi.DeleteExpensesIdRequestObject,
+) (oapi.DeleteExpensesIdResponseObject, error) {
+	err := app_service_expenses.DeleteExpense(ctx, s.deps, request.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return oapi.DeleteExpensesId204Response{}, nil
+}

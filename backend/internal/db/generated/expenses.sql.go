@@ -73,8 +73,46 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (C
 	return i, err
 }
 
+const deleteExpense = `-- name: DeleteExpense :exec
+DELETE FROM expenses WHERE id = $1
+`
+
+func (q *Queries) DeleteExpense(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteExpense, id)
+	return err
+}
+
+const getExpenseByIDAndUser = `-- name: GetExpenseByIDAndUser :one
+SELECT
+  id, user_id, category, amount, expense_date, created_at, remark, updated_at
+FROM expenses
+WHERE id = $1
+  AND user_id = $2
+`
+
+type GetExpenseByIDAndUserParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetExpenseByIDAndUser(ctx context.Context, arg GetExpenseByIDAndUserParams) (Expense, error) {
+	row := q.db.QueryRow(ctx, getExpenseByIDAndUser, arg.ID, arg.UserID)
+	var i Expense
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Category,
+		&i.Amount,
+		&i.ExpenseDate,
+		&i.CreatedAt,
+		&i.Remark,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listExpensesByUserAndRange = `-- name: ListExpensesByUserAndRange :many
-SELECT id, user_id, category, amount, expense_date, created_at, remark
+SELECT id, user_id, category, amount, expense_date, created_at, remark, updated_at
 FROM expenses
 WHERE user_id = $1
   AND expense_date >= $2
@@ -108,6 +146,7 @@ func (q *Queries) ListExpensesByUserAndRange(ctx context.Context, arg ListExpens
 			&i.ExpenseDate,
 			&i.CreatedAt,
 			&i.Remark,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -117,4 +156,68 @@ func (q *Queries) ListExpensesByUserAndRange(ctx context.Context, arg ListExpens
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateExpense = `-- name: UpdateExpense :one
+UPDATE expenses
+SET
+  category     = $3,
+  amount       = $4,
+  expense_date = $5,
+  remark       = $6,
+  updated_at   = now()
+WHERE id = $1
+  AND user_id = $2
+RETURNING
+  id,
+  user_id,
+  category,
+  amount,
+  expense_date,
+  remark,
+  created_at,
+  updated_at
+`
+
+type UpdateExpenseParams struct {
+	ID          uuid.UUID   `json:"id"`
+	UserID      uuid.UUID   `json:"user_id"`
+	Category    string      `json:"category"`
+	Amount      int32       `json:"amount"`
+	ExpenseDate time.Time   `json:"expense_date"`
+	Remark      pgtype.Text `json:"remark"`
+}
+
+type UpdateExpenseRow struct {
+	ID          uuid.UUID        `json:"id"`
+	UserID      uuid.UUID        `json:"user_id"`
+	Category    string           `json:"category"`
+	Amount      int32            `json:"amount"`
+	ExpenseDate time.Time        `json:"expense_date"`
+	Remark      pgtype.Text      `json:"remark"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
+}
+
+func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (UpdateExpenseRow, error) {
+	row := q.db.QueryRow(ctx, updateExpense,
+		arg.ID,
+		arg.UserID,
+		arg.Category,
+		arg.Amount,
+		arg.ExpenseDate,
+		arg.Remark,
+	)
+	var i UpdateExpenseRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Category,
+		&i.Amount,
+		&i.ExpenseDate,
+		&i.Remark,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

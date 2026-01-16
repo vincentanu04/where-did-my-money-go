@@ -61,6 +61,27 @@ const injectedRtkApi = api
         }),
         invalidatesTags: [],
       }),
+      putExpensesById: build.mutation<
+        PutExpensesByIdApiResponse,
+        PutExpensesByIdApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/expenses/${queryArg.id}`,
+          method: "PUT",
+          body: queryArg.updateExpense,
+        }),
+        invalidatesTags: [],
+      }),
+      deleteExpensesById: build.mutation<
+        DeleteExpensesByIdApiResponse,
+        DeleteExpensesByIdApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/expenses/${queryArg.id}`,
+          method: "DELETE",
+        }),
+        invalidatesTags: [],
+      }),
       postExpensesExport: build.mutation<
         PostExpensesExportApiResponse,
         PostExpensesExportApiArg
@@ -112,6 +133,15 @@ export type PostExpensesCreateApiResponse = /** status 201 Created */ Expense;
 export type PostExpensesCreateApiArg = {
   createExpense: CreateExpense;
 };
+export type PutExpensesByIdApiResponse = unknown;
+export type PutExpensesByIdApiArg = {
+  id: string;
+  updateExpense: UpdateExpense;
+};
+export type DeleteExpensesByIdApiResponse = unknown;
+export type DeleteExpensesByIdApiArg = {
+  id: string;
+};
 export type PostExpensesExportApiResponse = unknown;
 export type PostExpensesExportApiArg = {
   expenseExportRequest: ExpenseExportRequest;
@@ -148,6 +178,10 @@ export type CreateExpense = {
   date: Date;
   remark?: string;
 };
+export type UpdateExpense = {
+  amount?: number;
+  remark?: string;
+};
 export type ExpenseExportRequest = {
   type: "monthly" | "yearly" | "range";
   /** 0 = current month, 1 = previous month */
@@ -167,6 +201,8 @@ export const {
   usePostAuthLogoutMutation,
   usePostExpensesListMutation,
   usePostExpensesCreateMutation,
+  usePutExpensesByIdMutation,
+  useDeleteExpensesByIdMutation,
   usePostExpensesExportMutation,
   useGetSummaryQuery,
 } = injectedRtkApi;
