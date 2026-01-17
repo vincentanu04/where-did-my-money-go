@@ -3,19 +3,32 @@ import { Select, SelectItem, SelectTrigger, SelectValue, SelectContent } from "@
 import { useState } from "react"
 import { downloadBlob } from '@/utils/download'
 import { fetchExpensesCsv } from '@/utils/api'
+import { toast } from 'sonner'
 
 export function MonthlyExport({ onDone }: { onDone: () => void }) {
   const [offset, setOffset] = useState("0")
   const monthOptions = getMonthOptions(24);
 
   const handleExport = async () => {
-    const blob = await fetchExpensesCsv({
-      type: "monthly",
-      monthOffset: Number(offset),
-    })
+    const offsetNum = Number(offset)
 
-    downloadBlob(blob, "expenses.csv")
-    onDone()
+    const date = new Date()
+    date.setMonth(date.getMonth() - offsetNum)
+
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+
+    try {
+      const blob = await fetchExpensesCsv({
+        type: "monthly",
+        monthOffset: offsetNum,
+      })
+
+      downloadBlob(blob, `expenses-${yyyy}-${mm}.csv`)
+      onDone()
+    } catch (error) {
+      toast.error("Failed to export CSV");
+    }
   }
 
   return (

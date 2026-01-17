@@ -10,9 +10,9 @@ export function ExportCsvButton() {
     <div className="w-full">
       <Button
         onClick={() => setOpen(true)}
-        className="w-full gap-2 h-10"
+        className="w-full gap-2 h-12"
       >
-        <Download className="h-4 w-4" />
+        <Download className="h-8 w-8" />
         Export CSV
       </Button>
 

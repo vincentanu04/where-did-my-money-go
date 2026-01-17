@@ -10,19 +10,26 @@ import {
 import { useState } from "react"
 import { downloadBlob } from "@/utils/download"
 import { fetchExpensesCsv } from '@/utils/api'
+import { toast } from 'sonner'
 
 export function YearlyExport({ onDone }: { onDone: () => void }) {
   const [offset, setOffset] = useState("0")
   const yearOptions = getYearOptions(10)
 
   const handleExport = async () => {
-    const blob = await fetchExpensesCsv({
-      type: "yearly",
-      year: new Date().getFullYear() - Number(offset),
-    })
+    const year = new Date().getFullYear() - Number(offset)
 
-    downloadBlob(blob as any, "expenses-year.csv")
-    onDone()
+    try {
+      const blob = await fetchExpensesCsv({
+        type: "yearly",
+        year,
+      })
+
+      downloadBlob(blob as any, `expenses-${year}.csv`)
+      onDone()
+    } catch (err) {
+      toast.error("Failed to export CSV");
+    }
   }
 
   return (

@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { downloadBlob } from "@/utils/download"
 import { fetchExpensesCsv } from '@/utils/api'
+import { toast } from 'sonner'
 
 export function RangeExport({ onDone }: { onDone: () => void }) {
   const [from, setFrom] = useState("")
@@ -11,14 +12,24 @@ export function RangeExport({ onDone }: { onDone: () => void }) {
   const handleExport = async () => {
     if (!from || !to) return
 
-    const blob = await fetchExpensesCsv({
-      type: "range",
-      from,
-      to,
-    })
+    try {
+      const blob = await fetchExpensesCsv({
+        type: "range",
+        from,
+        to,
+      })
 
-    downloadBlob(blob as any, "expenses-range.csv")
-    onDone()
+      const fromLabel = from.replaceAll('-', '')
+      const toLabel = to.replaceAll('-', '')
+
+      downloadBlob(
+        blob as any,
+        `expenses-${fromLabel}-to-${toLabel}.csv`
+      )
+      onDone()
+    } catch (err) {
+      toast.error("Failed to export CSV");
+    }
   }
 
   return (
