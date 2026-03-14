@@ -93,6 +93,19 @@ const injectedRtkApi = api
         }),
         invalidatesTags: [],
       }),
+      getExpensesDailyTotals: build.query<
+        GetExpensesDailyTotalsApiResponse,
+        GetExpensesDailyTotalsApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/expenses/daily-totals`,
+          params: {
+            month: queryArg.month,
+            year: queryArg.year,
+          },
+        }),
+        providesTags: [],
+      }),
       getSummary: build.query<GetSummaryApiResponse, GetSummaryApiArg>({
         query: (queryArg) => ({
           url: `/summary`,
@@ -146,6 +159,12 @@ export type PostExpensesExportApiResponse = unknown;
 export type PostExpensesExportApiArg = {
   expenseExportRequest: ExpenseExportRequest;
 };
+export type GetExpensesDailyTotalsApiResponse =
+  /** status 200 Daily totals */ DailyTotal[];
+export type GetExpensesDailyTotalsApiArg = {
+  month: number;
+  year: number;
+};
 export type GetSummaryApiResponse =
   /** status 200 Summary per category */ CategorySummary[];
 export type GetSummaryApiArg = {
@@ -190,6 +209,10 @@ export type ExpenseExportRequest = {
   from?: string;
   to?: string;
 };
+export type DailyTotal = {
+  date: number;
+  total: number;
+};
 export type CategorySummary = {
   category: string;
   total: number;
@@ -204,5 +227,6 @@ export const {
   usePutExpensesByIdMutation,
   useDeleteExpensesByIdMutation,
   usePostExpensesExportMutation,
+  useGetExpensesDailyTotalsQuery,
   useGetSummaryQuery,
 } = injectedRtkApi;

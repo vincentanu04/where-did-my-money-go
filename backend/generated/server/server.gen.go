@@ -38,6 +38,12 @@ type CreateExpense struct {
 	Remark   *string `json:"remark,omitempty"`
 }
 
+// DailyTotal defines model for DailyTotal.
+type DailyTotal struct {
+	Date  int `json:"date"`
+	Total int `json:"total"`
+}
+
 // Date defines model for Date.
 type Date struct {
 	Date  int `json:"date"`
@@ -99,6 +105,12 @@ type PostAuthRegisterJSONBody struct {
 	Password string `json:"password"`
 }
 
+// GetExpensesDailyTotalsParams defines parameters for GetExpensesDailyTotals.
+type GetExpensesDailyTotalsParams struct {
+	Month int `form:"month" json:"month"`
+	Year  int `form:"year" json:"year"`
+}
+
 // GetSummaryParams defines parameters for GetSummary.
 type GetSummaryParams struct {
 	Date openapi_types.Date `form:"date" json:"date"`
@@ -139,6 +151,9 @@ type ServerInterface interface {
 	// Create an expense
 	// (POST /expenses/create)
 	PostExpensesCreate(w http.ResponseWriter, r *http.Request)
+	// Total expenses per day for a given month
+	// (GET /expenses/daily-totals)
+	GetExpensesDailyTotals(w http.ResponseWriter, r *http.Request, params GetExpensesDailyTotalsParams)
 	// Export expenses as CSV
 	// (POST /expenses/export)
 	PostExpensesExport(w http.ResponseWriter, r *http.Request)
@@ -185,6 +200,12 @@ func (_ Unimplemented) PostAuthRegister(w http.ResponseWriter, r *http.Request) 
 // Create an expense
 // (POST /expenses/create)
 func (_ Unimplemented) PostExpensesCreate(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Total expenses per day for a given month
+// (GET /expenses/daily-totals)
+func (_ Unimplemented) GetExpensesDailyTotals(w http.ResponseWriter, r *http.Request, params GetExpensesDailyTotalsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -288,6 +309,55 @@ func (siw *ServerInterfaceWrapper) PostExpensesCreate(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostExpensesCreate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetExpensesDailyTotals operation middleware
+func (siw *ServerInterfaceWrapper) GetExpensesDailyTotals(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetExpensesDailyTotalsParams
+
+	// ------------- Required query parameter "month" -------------
+
+	if paramValue := r.URL.Query().Get("month"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "month"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "month", r.URL.Query(), &params.Month)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "month", Err: err})
+		return
+	}
+
+	// ------------- Required query parameter "year" -------------
+
+	if paramValue := r.URL.Query().Get("year"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "year"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "year", r.URL.Query(), &params.Year)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExpensesDailyTotals(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -538,6 +608,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/expenses/create", wrapper.PostExpensesCreate)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/expenses/daily-totals", wrapper.GetExpensesDailyTotals)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/expenses/export", wrapper.PostExpensesExport)
 	})
 	r.Group(func(r chi.Router) {
@@ -670,6 +743,23 @@ func (response PostExpensesCreate201JSONResponse) VisitPostExpensesCreateRespons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetExpensesDailyTotalsRequestObject struct {
+	Params GetExpensesDailyTotalsParams
+}
+
+type GetExpensesDailyTotalsResponseObject interface {
+	VisitGetExpensesDailyTotalsResponse(w http.ResponseWriter) error
+}
+
+type GetExpensesDailyTotals200JSONResponse []DailyTotal
+
+func (response GetExpensesDailyTotals200JSONResponse) VisitGetExpensesDailyTotalsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type PostExpensesExportRequestObject struct {
 	Body *PostExpensesExportJSONRequestBody
 }
@@ -797,6 +887,9 @@ type StrictServerInterface interface {
 	// Create an expense
 	// (POST /expenses/create)
 	PostExpensesCreate(ctx context.Context, request PostExpensesCreateRequestObject) (PostExpensesCreateResponseObject, error)
+	// Total expenses per day for a given month
+	// (GET /expenses/daily-totals)
+	GetExpensesDailyTotals(ctx context.Context, request GetExpensesDailyTotalsRequestObject) (GetExpensesDailyTotalsResponseObject, error)
 	// Export expenses as CSV
 	// (POST /expenses/export)
 	PostExpensesExport(ctx context.Context, request PostExpensesExportRequestObject) (PostExpensesExportResponseObject, error)
@@ -977,6 +1070,32 @@ func (sh *strictHandler) PostExpensesCreate(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostExpensesCreateResponseObject); ok {
 		if err := validResponse.VisitPostExpensesCreateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetExpensesDailyTotals operation middleware
+func (sh *strictHandler) GetExpensesDailyTotals(w http.ResponseWriter, r *http.Request, params GetExpensesDailyTotalsParams) {
+	var request GetExpensesDailyTotalsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetExpensesDailyTotals(ctx, request.(GetExpensesDailyTotalsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetExpensesDailyTotals")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetExpensesDailyTotalsResponseObject); ok {
+		if err := validResponse.VisitGetExpensesDailyTotalsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -50,6 +50,15 @@ func (s *Server) PostExpensesExport(
 	}, nil
 }
 
+// (GET /expenses/daily-totals)
+func (s *Server) GetExpensesDailyTotals(ctx context.Context, request oapi.GetExpensesDailyTotalsRequestObject) (oapi.GetExpensesDailyTotalsResponseObject, error) {
+	totals, err := app_service_expenses.GetDailyTotals(ctx, s.deps, request.Params.Month, request.Params.Year)
+	if err != nil {
+		return nil, err
+	}
+	return oapi.GetExpensesDailyTotals200JSONResponse(totals), nil
+}
+
 // (GET /summary)
 func (s *Server) GetSummary(ctx context.Context, request oapi.GetSummaryRequestObject) (oapi.GetSummaryResponseObject, error) {
 	return oapi.GetSummary200JSONResponse([]oapi.CategorySummary{

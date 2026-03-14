@@ -163,6 +163,29 @@ paths:
               schema:
                 type: string
                 format: binary
+  /expenses/daily-totals:
+    get:
+      summary: Total expenses per day for a given month
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Daily totals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyTotal"
   /summary:
     get:
       summary: Category summary for a date
@@ -223,6 +246,14 @@ components:
           type: integer
         remark:
           type: string
+    DailyTotal:
+      type: object
+      required: [date, total]
+      properties:
+        date:
+          type: integer
+        total:
+          type: integer
     CategorySummary:
       type: object
       required: [category, total]
