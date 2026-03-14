@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- Frontend build ----------
-FROM node:18 AS frontend
+FROM node:22 AS frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install
