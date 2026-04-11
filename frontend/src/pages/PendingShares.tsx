@@ -38,9 +38,7 @@ const PendingShares = () => {
   }
 
   return (
-    <div className="p-4 space-y-3 max-w-lg mx-auto">
-      <h2 className="font-semibold text-lg">Pending shared expenses</h2>
-
+    <div className="space-y-3">
       {isLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : !shares || shares.length === 0 ? (
@@ -53,27 +51,30 @@ const PendingShares = () => {
         shares.map(s => (
           <Card key={s.id}>
             <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between gap-2">
-                <div className="space-y-0.5 min-w-0">
-                  <div className="font-medium text-sm">{s.category}</div>
-                  <div className="text-sm text-muted-foreground">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1 min-w-0">
+                  <div className="font-semibold text-sm">{s.category}</div>
+                  <div className="text-base font-medium">
                     ¥{s.splitAmount.toLocaleString()}
-                    <span className="mx-1">·</span>
-                    shared from ¥{s.originalTotal.toLocaleString()}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      of ¥{s.originalTotal.toLocaleString()} total
+                    </span>
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
-                    From: {s.sharedByEmail}
+                    From {s.sharedByEmail}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(s.expenseDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button size="icon" variant="ghost" onClick={() => handleAccept(s.id)} title="Accept">
-                    <Check className="h-4 w-4 text-green-600" />
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  <Button size="sm" variant="outline" onClick={() => handleAccept(s.id)} className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700">
+                    <Check className="h-3.5 w-3.5 mr-1" />
+                    Accept
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleReject(s.id)} title="Reject">
-                    <X className="h-4 w-4 text-destructive" />
+                  <Button size="sm" variant="ghost" onClick={() => handleReject(s.id)} className="text-muted-foreground">
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Decline
                   </Button>
                 </div>
               </div>

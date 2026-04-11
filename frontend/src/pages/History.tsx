@@ -6,8 +6,7 @@ import { usePostExpensesListMutation, useGetExpensesDailyTotalsQuery, type Expen
 import { useEffect, useState } from 'react'
 import { ExportCsvButton } from '@/components/ExportCsvButton'
 import { toast } from 'sonner'
-import { LayoutList, CalendarDays } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export default function History() {
   const { date: homeDate } = useHomeDate()
@@ -67,24 +66,34 @@ export default function History() {
         <DateHeader date={date} onPrev={prevDay} onNext={nextDay} />
       ) : null}
 
-      {/* View toggle */}
-      <div className="flex justify-end gap-1 px-4 pt-2">
-        <Button
-          variant={view === 'list' ? 'default' : 'ghost'}
-          size="icon"
-          onClick={() => setView('list')}
-          title="List view"
-        >
-          <LayoutList className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={view === 'calendar' ? 'default' : 'ghost'}
-          size="icon"
-          onClick={() => setView('calendar')}
-          title="Calendar view"
-        >
-          <CalendarDays className="h-4 w-4" />
-        </Button>
+      {/* View toggle — pill segmented control */}
+      <div className="flex justify-center px-4 pt-2">
+        <div className="inline-flex rounded-full bg-muted p-1 gap-0">
+          <button
+            type="button"
+            onClick={() => setView('list')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+              view === 'list'
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            List
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('calendar')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+              view === 'calendar'
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Calendar
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 pb-24">

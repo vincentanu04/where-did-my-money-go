@@ -24,21 +24,18 @@ export function DateHeader({ date, onPrev, onNext }: Props) {
       </Button>
 
       <div className="text-center">
-        <div className="text-sm text-muted-foreground">
-          {date.toLocaleDateString("en-GB", {
-            weekday: "long",
-          })}
+        <div className="text-xs text-muted-foreground uppercase tracking-wide">
+          {date.toLocaleDateString("en-GB", { weekday: "long" })}
         </div>
-        <div className="font-semibold">
-          {date.toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-          })}
+        <div className="text-2xl font-bold leading-tight">
+          {date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {date.toLocaleDateString("en-GB", { year: "numeric" })}
         </div>
 
         {isToday(date) && (
-          <div className="text-xs text-muted-foreground">Today</div>
+          <div className="inline-flex mt-0.5 items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">Today</div>
         )}
       </div>
 

@@ -27,10 +27,17 @@ export default function Register() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-center">Register</CardTitle>
-        </CardHeader>
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center space-y-1">
+          <div className="text-4xl">💸</div>
+          <h1 className="text-2xl font-bold tracking-tight">Where Did My Money Go</h1>
+          <p className="text-sm text-muted-foreground">Create your free account</p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">Create account</CardTitle>
+          </CardHeader>
 
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -74,6 +81,7 @@ export default function Register() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

@@ -27,10 +27,17 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-center">Login</CardTitle>
-        </CardHeader>
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center space-y-1">
+          <div className="text-4xl">💸</div>
+          <h1 className="text-2xl font-bold tracking-tight">Where Did My Money Go</h1>
+          <p className="text-sm text-muted-foreground">Track every yen, hassle-free</p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">Sign in</CardTitle>
+          </CardHeader>
 
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -62,7 +69,7 @@ export default function Login() {
             )}
 
             <Button className="w-full" type="submit" disabled={isLoading}>
-              {isLoading ? "Logging in…" : "Login"}
+              {isLoading ? "Signing in…" : "Sign in"}
             </Button>
           </form>
 
@@ -74,6 +81,7 @@ export default function Login() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

@@ -11,6 +11,16 @@ import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { Pencil, Trash2, Share2, Clock } from 'lucide-react'
 import { ShareExpenseDialog } from '@/components/ShareExpenseDialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 type Props = {
   expenses: ExpensesByCategory[]
@@ -21,7 +31,8 @@ type Props = {
 export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [sharingExpense, setSharingExpense] = useState<Expense | null>(null)
-  const [amount, setAmount] = useState<string>('') // 👈 string
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null)
+  const [amount, setAmount] = useState<string>('')
   const [remark, setRemark] = useState('')
 
   const [updateExpense, { isLoading: isUpdating }] =
@@ -71,16 +82,16 @@ export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
     }
   }
 
-  const onDelete = async (expense: Expense) => {
-    const hasPending = expense.pendingShareCount && expense.pendingShareCount > 0
-    const msg = hasPending
-      ? `Delete this expense? This will also cancel ${expense.pendingShareCount} pending share${expense.pendingShareCount ?? 0 > 1 ? 's' : ''}.`
-      : 'Delete this expense?'
-    if (!confirm(msg)) return
+  const onDelete = (expense: Expense) => {
+    setDeletingExpense(expense)
+  }
 
+  const confirmDelete = async () => {
+    if (!deletingExpense) return
     try {
-      await deleteExpense({ id: expense.id }).unwrap()
+      await deleteExpense({ id: deletingExpense.id }).unwrap()
       toast.success('Expense deleted')
+      setDeletingExpense(null)
       onChanged()
     } catch {
       toast.error('Failed to delete expense')
@@ -244,6 +255,29 @@ export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
         }}
       />
     )}
+
+    <AlertDialog open={!!deletingExpense} onOpenChange={open => { if (!open) setDeletingExpense(null) }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete expense?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {deletingExpense?.pendingShareCount && deletingExpense.pendingShareCount > 0
+              ? `This will also cancel ${deletingExpense.pendingShareCount} pending share${deletingExpense.pendingShareCount > 1 ? 's' : ''}.`
+              : 'This action cannot be undone.'}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={confirmDelete}
+            disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </>
   )
 }

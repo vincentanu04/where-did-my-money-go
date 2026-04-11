@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useState, useEffect } from "react"
 import { useGetFriendsQuery } from "@/api/client"
 import { Spinner } from "@/components/ui/spinner"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export type SplitEntry = { friendId: string; amount: number }
 
@@ -113,12 +114,10 @@ export function AddExpenseModal({ category, onClose, onSubmit }: Props) {
                   <>
                     {friends.map(f => (
                       <div key={f.id} className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           id={`split-${f.id}`}
                           checked={selected.has(f.id)}
-                          onChange={() => toggle(f.id)}
-                          className="h-4 w-4 rounded border-input"
+                          onCheckedChange={() => toggle(f.id)}
                         />
                         <Label htmlFor={`split-${f.id}`} className="flex-1 cursor-pointer text-sm">{f.email}</Label>
                         {selected.has(f.id) && (

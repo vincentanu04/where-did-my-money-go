@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { useGetFriendsQuery, usePostExpensesByIdShareMutation } from '@/api/client'
 import type { Expense } from '@/api/client'
@@ -110,12 +111,10 @@ export function ShareExpenseDialog({ expense, onClose, onShared }: Props) {
           <div className="space-y-3">
             {friends.map(f => (
               <div key={f.id} className="flex items-center gap-3">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id={`friend-${f.id}`}
                   checked={selected.has(f.id)}
-                  onChange={() => toggle(f.id)}
-                  className="h-4 w-4 rounded border-input"
+                  onCheckedChange={() => toggle(f.id)}
                 />
                 <Label htmlFor={`friend-${f.id}`} className="flex-1 cursor-pointer">{f.email}</Label>
                 {selected.has(f.id) && (

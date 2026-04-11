@@ -19,6 +19,13 @@ function getInitials(email: string) {
   return email.split("@")[0].slice(0, 2).toUpperCase()
 }
 
+const PAGE_TITLES: Record<string, string> = {
+  "/": "Home",
+  "/history": "History",
+  "/friends": "Friends",
+  "/pending-shares": "Pending Shares",
+}
+
 export default function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -27,6 +34,8 @@ export default function AppLayout() {
 
   const [logout] = usePostAuthLogoutMutation()
   const { data: badge } = useGetNotificationsBadgeQuery(undefined, { skip: !user })
+
+  const pageTitle = PAGE_TITLES[location.pathname] ?? ""
 
   const handleLogout = async () => {
     try {
@@ -54,8 +63,8 @@ export default function AppLayout() {
               <div className="w-9 h-9" />
             )}
 
-            <span className="text-sm text-muted-foreground capitalize">
-              {location.pathname === "/" ? "Home" : location.pathname.slice(1)}
+            <span className="font-semibold text-base">
+              {pageTitle}
             </span>
           </div>
 
