@@ -34,7 +34,10 @@ export default function History() {
   const [expenses, setExpenses] = useState<ExpensesByCategory[]>([])
 
   const { data: dailyTotals, isFetching: calFetching, refetch: refetchTotals } =
-    useGetExpensesDailyTotalsQuery({ month: date.getMonth() + 1, year: date.getFullYear() })
+    useGetExpensesDailyTotalsQuery(
+      { month: date.getMonth() + 1, year: date.getFullYear() },
+      { refetchOnMountOrArgChange: true },
+    )
 
   const fetchExpenses = () => {
     getExpenses({ date: oapiDate })
@@ -50,6 +53,7 @@ export default function History() {
 
   useEffect(() => {
     if (view === 'list') fetchExpenses()
+    if (view === 'calendar') refetchTotals()
   }, [date, view])
 
   const handleDayClick = (day: number) => {
