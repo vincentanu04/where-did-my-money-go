@@ -1,43 +1,8 @@
 volumes:
   pgdata_wdmmg:
+  go_mod_cache:
 
 services:
-  # portgenius-backend:
-  #   image: rust:1.80
-  #   container_name: portgenius-backend
-  #   working_dir: /app
-  #   volumes:
-  #     - ./backend:/app
-  #   entrypoint: 
-  #   - /bin/sh
-  #   - -c
-  #   - | 
-  #     cargo install cargo-watch && 
-  #     cargo watch -x run
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     - portgenius-db
-
-  # portgenius-frontend:
-  #   image: oven/bun:1.2
-  #   container_name: portgenius-frontend
-  #   working_dir: /app
-  #   volumes:
-  #     - ./frontend:/app
-  #     - node_modules_frontend:/app/node_modules
-  #     - vite_cache:/app/node_modules/.vite
-  #   entrypoint:
-  #     - /bin/bash
-  #     - -c
-  #     - |
-  #       bun install
-  #       bun run dev
-  #   ports:
-  #     - "5173:5173"
-  #   # depends_on:
-  #     # - backend
-
   wdmmg-db:
     image: postgres:17
     container_name: wdmmg-db
@@ -50,3 +15,47 @@ services:
       - pgdata_wdmmg:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wdmmg_user -d wdmmg_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  wdmmg-backend:
+    image: golang:1.25
+    container_name: wdmmg-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - go_mod_cache:/go/pkg/mod
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://wdmmg_user:wdmmg_password@wdmmg-db:5432/wdmmg_db?sslmode=disable
+      JWT_SECRET: change-me-to-a-long-random-secret
+      APP_ENV: development
+      GOMODCACHE: /go/pkg/mod
+    depends_on:
+      wdmmg-db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        go tool goose -dir internal/db/migrations postgres \"$$DATABASE_URL\" up &&
+        go tool sqlc generate -f internal/db/sqlc.yml &&
+        go tool air
+      "
+
+  wdmmg-frontend:
+    image: node:22
+    container_name: wdmmg-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_BACKEND_URL: http://wdmmg-backend:8080
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - wdmmg-backend

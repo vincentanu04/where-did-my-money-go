@@ -1,9 +1,9 @@
-include .env
+include .env.local
 
 .PHONY: gen gen-go gen-ts tidy migrate-up migrate-down sqlc-codegen
 
 run:
-	go run main.go
+	docker compose up -d
 	
 ## Generate everything
 gen: gen-go gen-ts tidy
