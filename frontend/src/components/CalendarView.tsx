@@ -1,14 +1,16 @@
-import { useGetExpensesDailyTotalsQuery } from '@/api/client'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
+import type { DailyTotal } from '@/api/client'
 
 type Props = {
   date: Date
   onPrev: () => void
   onNext: () => void
   onDayClick: (day: number) => void
+  totals: DailyTotal[]
+  isFetching: boolean
 }
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -23,11 +25,9 @@ function startWeekday(year: number, month: number) {
   return (d + 6) % 7 // convert Sun=0..Sat=6 → Mon=0..Sun=6
 }
 
-export function CalendarView({ date, onPrev, onNext, onDayClick }: Props) {
+export function CalendarView({ date, onPrev, onNext, onDayClick, totals, isFetching }: Props) {
   const month = date.getMonth() + 1
   const year = date.getFullYear()
-
-  const { data: totals, isFetching } = useGetExpensesDailyTotalsQuery({ month, year })
 
   const totalsByDay = (totals ?? []).reduce<Record<number, number>>((acc, t) => {
     acc[t.date] = t.total
@@ -52,6 +52,13 @@ export function CalendarView({ date, onPrev, onNext, onDayClick }: Props) {
   const maxTotal = Math.max(0, ...Object.values(totalsByDay))
   const monthlyTotal = Object.values(totalsByDay).reduce((s, v) => s + v, 0)
 
+  const daysElapsed = isCurrentMonth
+    ? today.getDate()
+    : year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth() + 1)
+      ? daysInMonth
+      : 0
+  const avgPerDay = daysElapsed > 0 && monthlyTotal > 0 ? Math.round(monthlyTotal / daysElapsed) : null
+
   return (
     <div className="flex flex-col gap-3">
       {/* Month navigation */}
@@ -66,6 +73,11 @@ export function CalendarView({ date, onPrev, onNext, onDayClick }: Props) {
           {monthlyTotal > 0 && (
             <div className="text-sm text-muted-foreground">
               Total: <span className="font-medium text-foreground">¥{monthlyTotal.toLocaleString()}</span>
+            </div>
+          )}
+          {avgPerDay !== null && (
+            <div className="text-sm text-muted-foreground">
+              Avg/day: <span className="font-medium text-foreground">¥{avgPerDay.toLocaleString()}</span>
             </div>
           )}
         </div>

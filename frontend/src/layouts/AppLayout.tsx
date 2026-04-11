@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
-import { ArrowLeft, LogOut } from "lucide-react"
+import { ArrowLeft, LogOut, Users, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -13,6 +13,7 @@ import { useSelector, useDispatch } from "react-redux"
 import type { RootState } from "@/store"
 import { loggedOut } from "@/store/authSlice"
 import { usePostAuthLogoutMutation } from "@/api/client"
+import { useGetNotificationsBadgeQuery } from "@/api/client"
 
 function getInitials(email: string) {
   return email.split("@")[0].slice(0, 2).toUpperCase()
@@ -25,6 +26,7 @@ export default function AppLayout() {
   const { user } = useSelector((state: RootState) => state.auth)
 
   const [logout] = usePostAuthLogoutMutation()
+  const { data: badge } = useGetNotificationsBadgeQuery(undefined, { skip: !user })
 
   const handleLogout = async () => {
     try {
@@ -58,6 +60,37 @@ export default function AppLayout() {
           </div>
 
           {user && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/pending-shares")}
+                title="Pending shares"
+                className="relative"
+              >
+                <Bell className="h-5 w-5" />
+                {badge && badge.pendingShares > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-white font-medium">
+                    {badge.pendingShares > 9 ? '9+' : badge.pendingShares}
+                  </span>
+                )}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/friends")}
+                title="Friends"
+                className="relative"
+              >
+                <Users className="h-5 w-5" />
+                {badge && badge.friendRequests > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-white font-medium">
+                    {badge.friendRequests > 9 ? '9+' : badge.friendRequests}
+                  </span>
+                )}
+              </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="h-8 w-8 cursor-pointer">
@@ -80,6 +113,7 @@ export default function AppLayout() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           )}
         </header>
 

@@ -2,7 +2,7 @@ import { useHomeDate } from "@/hooks/useHomeDate"
 import { DateHeader } from "@/components/DateHeader"
 import { ExpenseList } from "@/components/ExpenseList"
 import { CalendarView } from "@/components/CalendarView"
-import { usePostExpensesListMutation, type ExpensesByCategory } from '@/api/client'
+import { usePostExpensesListMutation, useGetExpensesDailyTotalsQuery, type ExpensesByCategory } from '@/api/client'
 import { useEffect, useState } from 'react'
 import { ExportCsvButton } from '@/components/ExportCsvButton'
 import { toast } from 'sonner'
@@ -33,11 +33,19 @@ export default function History() {
   const [getExpenses, { isLoading }] = usePostExpensesListMutation()
   const [expenses, setExpenses] = useState<ExpensesByCategory[]>([])
 
+  const { data: dailyTotals, isFetching: calFetching, refetch: refetchTotals } =
+    useGetExpensesDailyTotalsQuery({ month: date.getMonth() + 1, year: date.getFullYear() })
+
   const fetchExpenses = () => {
     getExpenses({ date: oapiDate })
       .unwrap()
       .then(setExpenses)
       .catch(() => toast.error('Failed to fetch expenses'))
+  }
+
+  const onChanged = () => {
+    fetchExpenses()
+    refetchTotals()
   }
 
   useEffect(() => {
@@ -77,13 +85,15 @@ export default function History() {
 
       <div className="flex-1 overflow-y-auto p-4 pb-24">
         {view === 'list' ? (
-          <ExpenseList expenses={expenses} isLoading={isLoading} onChanged={fetchExpenses} />
+          <ExpenseList expenses={expenses} isLoading={isLoading} onChanged={onChanged} />
         ) : (
           <CalendarView
             date={date}
             onPrev={prevMonth}
             onNext={nextMonth}
             onDayClick={handleDayClick}
+            totals={dailyTotals ?? []}
+            isFetching={calFetching}
           />
         )}
       </div>

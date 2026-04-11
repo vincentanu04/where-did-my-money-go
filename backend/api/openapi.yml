@@ -132,6 +132,8 @@ paths:
           description: Updated expense
         "404":
           description: Expense not found
+        "409":
+          description: Expense has pending shares — resolve them first
     delete:
       summary: Delete an expense
       parameters:
@@ -206,6 +208,185 @@ paths:
                 items:
                   $ref: "#/components/schemas/CategorySummary"
 
+  /friends:
+    get:
+      summary: List accepted friends
+      responses:
+        "200":
+          description: List of friends
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Friend"
+
+  /friends/request:
+    post:
+      summary: Send a friend request by email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+      responses:
+        "204":
+          description: Request sent
+        "404":
+          description: User not found
+        "409":
+          description: Already friends or request already sent
+
+  /friends/requests:
+    get:
+      summary: List incoming pending friend requests
+      responses:
+        "200":
+          description: Pending incoming requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FriendRequest"
+
+  /friends/{id}/accept:
+    post:
+      summary: Accept a friend request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Accepted
+        "404":
+          description: Request not found
+
+  /friends/{id}/reject:
+    post:
+      summary: Reject a friend request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Rejected
+        "404":
+          description: Request not found
+
+  /friends/{id}:
+    delete:
+      summary: Remove a friend
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Removed
+
+  /expenses/{id}/share:
+    post:
+      summary: Share an expense with friends (cost-split)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShareExpenseRequest"
+      responses:
+        "204":
+          description: Shared
+        "400":
+          description: Invalid split amounts
+        "403":
+          description: Not the owner of this expense
+        "404":
+          description: Expense not found
+
+  /expenses/shared/pending:
+    get:
+      summary: List pending shared expenses addressed to current user
+      responses:
+        "200":
+          description: Pending shares
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PendingShare"
+
+  /expenses/shared/{shareId}/accept:
+    post:
+      summary: Accept a shared expense split
+      parameters:
+        - name: shareId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: Accepted — new expense created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "404":
+          description: Share not found
+
+  /expenses/shared/{shareId}/reject:
+    post:
+      summary: Reject a shared expense split
+      parameters:
+        - name: shareId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Rejected
+        "404":
+          description: Share not found
+
+  /notifications/badge:
+    get:
+      summary: Count of pending friend requests + pending shared expenses
+      responses:
+        "200":
+          description: Badge count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadgeCount"
+
 components:
   schemas:
     Expense:
@@ -223,6 +404,10 @@ components:
           type: string
           format: date-time
         remark:
+          type: string
+        pendingShareCount:
+          type: integer
+        sharedFromEmail:
           type: string
     CreateExpense:
       type: object
@@ -320,4 +505,76 @@ components:
           type: string
         createdAt:
           type: string
-          
+    Friend:
+      type: object
+      required: [friendshipId, id, email]
+      properties:
+        friendshipId:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+    FriendRequest:
+      type: object
+      required: [id, requesterEmail, requesterId, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        requesterId:
+          type: string
+          format: uuid
+        requesterEmail:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ShareSplit:
+      type: object
+      required: [friendId, amount]
+      properties:
+        friendId:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+    ShareExpenseRequest:
+      type: object
+      required: [splits]
+      properties:
+        splits:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShareSplit"
+    PendingShare:
+      type: object
+      required: [id, splitAmount, originalTotal, category, expenseDate, sharedByEmail, sharedById]
+      properties:
+        id:
+          type: string
+          format: uuid
+        splitAmount:
+          type: integer
+        originalTotal:
+          type: integer
+        category:
+          type: string
+        expenseDate:
+          type: string
+          format: date-time
+        sharedByEmail:
+          type: string
+        sharedById:
+          type: string
+          format: uuid
+    BadgeCount:
+      type: object
+      required: [friendRequests, pendingShares]
+      properties:
+        friendRequests:
+          type: integer
+        pendingShares:
+          type: integer

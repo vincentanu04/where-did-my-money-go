@@ -36,6 +36,9 @@ FROM expenses
 WHERE id = $1
   AND user_id = $2;
 
+-- name: GetExpenseByID :one
+SELECT * FROM expenses WHERE id = $1;
+
 -- name: UpdateExpense :one
 UPDATE expenses
 SET
@@ -58,4 +61,4 @@ RETURNING
 
 
 -- name: DeleteExpense :exec
-DELETE FROM expenses WHERE id = $1;
+DELETE FROM expenses WHERE id = $1 AND user_id = $2;

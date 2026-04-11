@@ -74,12 +74,37 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (C
 }
 
 const deleteExpense = `-- name: DeleteExpense :exec
-DELETE FROM expenses WHERE id = $1
+DELETE FROM expenses WHERE id = $1 AND user_id = $2
 `
 
-func (q *Queries) DeleteExpense(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteExpense, id)
+type DeleteExpenseParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) DeleteExpense(ctx context.Context, arg DeleteExpenseParams) error {
+	_, err := q.db.Exec(ctx, deleteExpense, arg.ID, arg.UserID)
 	return err
+}
+
+const getExpenseByID = `-- name: GetExpenseByID :one
+SELECT id, user_id, category, amount, expense_date, created_at, remark, updated_at FROM expenses WHERE id = $1
+`
+
+func (q *Queries) GetExpenseByID(ctx context.Context, id uuid.UUID) (Expense, error) {
+	row := q.db.QueryRow(ctx, getExpenseByID, id)
+	var i Expense
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Category,
+		&i.Amount,
+		&i.ExpenseDate,
+		&i.CreatedAt,
+		&i.Remark,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getExpenseByIDAndUser = `-- name: GetExpenseByIDAndUser :one

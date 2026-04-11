@@ -6,6 +6,8 @@ import (
 	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
 	app_service_auth "github.com/vincentanu04/where-did-my-money-go/internal/app_service/auth"
 	app_service_expenses "github.com/vincentanu04/where-did-my-money-go/internal/app_service/expenses"
+	app_service_friends "github.com/vincentanu04/where-did-my-money-go/internal/app_service/friends"
+	app_service_shared "github.com/vincentanu04/where-did-my-money-go/internal/app_service/shared_expenses"
 )
 
 // (POST /expenses/list)
@@ -114,18 +116,13 @@ func (s *Server) PutExpensesId(
 	ctx context.Context,
 	request oapi.PutExpensesIdRequestObject,
 ) (oapi.PutExpensesIdResponseObject, error) {
-	err := app_service_expenses.UpdateExpense(
+	return app_service_expenses.UpdateExpense(
 		ctx,
 		s.deps,
 		request.Id,
 		request.Body.Amount,
 		request.Body.Remark,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	return oapi.PutExpensesId204Response{}, nil
 }
 
 // (DELETE /expenses/{id})
@@ -139,4 +136,59 @@ func (s *Server) DeleteExpensesId(
 	}
 
 	return oapi.DeleteExpensesId204Response{}, nil
+}
+
+// (GET /friends)
+func (s *Server) GetFriends(ctx context.Context, request oapi.GetFriendsRequestObject) (oapi.GetFriendsResponseObject, error) {
+	return app_service_friends.GetFriends(ctx, s.deps)
+}
+
+// (POST /friends/request)
+func (s *Server) PostFriendsRequest(ctx context.Context, request oapi.PostFriendsRequestRequestObject) (oapi.PostFriendsRequestResponseObject, error) {
+	return app_service_friends.PostFriendsRequest(ctx, s.deps, request.Body.Email)
+}
+
+// (GET /friends/requests)
+func (s *Server) GetFriendsRequests(ctx context.Context, request oapi.GetFriendsRequestsRequestObject) (oapi.GetFriendsRequestsResponseObject, error) {
+	return app_service_friends.GetFriendsRequests(ctx, s.deps)
+}
+
+// (POST /friends/{id}/accept)
+func (s *Server) PostFriendsIdAccept(ctx context.Context, request oapi.PostFriendsIdAcceptRequestObject) (oapi.PostFriendsIdAcceptResponseObject, error) {
+	return app_service_friends.PostFriendsIdAccept(ctx, s.deps, request.Id)
+}
+
+// (POST /friends/{id}/reject)
+func (s *Server) PostFriendsIdReject(ctx context.Context, request oapi.PostFriendsIdRejectRequestObject) (oapi.PostFriendsIdRejectResponseObject, error) {
+	return app_service_friends.PostFriendsIdReject(ctx, s.deps, request.Id)
+}
+
+// (DELETE /friends/{id})
+func (s *Server) DeleteFriendsId(ctx context.Context, request oapi.DeleteFriendsIdRequestObject) (oapi.DeleteFriendsIdResponseObject, error) {
+	return app_service_friends.DeleteFriendsId(ctx, s.deps, request.Id)
+}
+
+// (POST /expenses/{id}/share)
+func (s *Server) PostExpensesIdShare(ctx context.Context, request oapi.PostExpensesIdShareRequestObject) (oapi.PostExpensesIdShareResponseObject, error) {
+	return app_service_shared.PostExpensesIdShare(ctx, s.deps, request.Id, request.Body.Splits)
+}
+
+// (GET /expenses/shared/pending)
+func (s *Server) GetExpensesSharedPending(ctx context.Context, request oapi.GetExpensesSharedPendingRequestObject) (oapi.GetExpensesSharedPendingResponseObject, error) {
+	return app_service_shared.GetExpensesSharedPending(ctx, s.deps)
+}
+
+// (POST /expenses/shared/{shareId}/accept)
+func (s *Server) PostExpensesSharedShareIdAccept(ctx context.Context, request oapi.PostExpensesSharedShareIdAcceptRequestObject) (oapi.PostExpensesSharedShareIdAcceptResponseObject, error) {
+	return app_service_shared.PostExpensesSharedShareIdAccept(ctx, s.deps, request.ShareId)
+}
+
+// (POST /expenses/shared/{shareId}/reject)
+func (s *Server) PostExpensesSharedShareIdReject(ctx context.Context, request oapi.PostExpensesSharedShareIdRejectRequestObject) (oapi.PostExpensesSharedShareIdRejectResponseObject, error) {
+	return app_service_shared.PostExpensesSharedShareIdReject(ctx, s.deps, request.ShareId)
+}
+
+// (GET /notifications/badge)
+func (s *Server) GetNotificationsBadge(ctx context.Context, request oapi.GetNotificationsBadgeRequestObject) (oapi.GetNotificationsBadgeResponseObject, error) {
+	return app_service_shared.GetNotificationsBadge(ctx, s.deps)
 }

@@ -23,12 +23,17 @@ func PostExpensesCreate(ctx context.Context, deps deps.Deps, date oapi.Date, amo
 		time.UTC,
 	)
 
+	remarkText := pgtype.Text{}
+	if remark != nil {
+		remarkText = pgtype.Text{String: *remark, Valid: true}
+	}
+
 	expense, err := db.CreateExpense(ctx, sqlc.CreateExpenseParams{
 		UserID:      userID,
 		Category:    category,
 		Amount:      int32(amount),
 		ExpenseDate: expenseDate,
-		Remark:      pgtype.Text{String: *remark, Valid: remark != nil},
+		Remark:      remarkText,
 	})
 	if err != nil {
 		return nil, err

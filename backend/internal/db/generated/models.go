@@ -22,6 +22,28 @@ type Expense struct {
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
+type Friendship struct {
+	ID          uuid.UUID `json:"id"`
+	RequesterID uuid.UUID `json:"requester_id"`
+	AddresseeID uuid.UUID `json:"addressee_id"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type SharedExpenseSplit struct {
+	ID                 uuid.UUID   `json:"id"`
+	SourceExpenseID    pgtype.UUID `json:"source_expense_id"`
+	SharedByUserID     uuid.UUID   `json:"shared_by_user_id"`
+	SharedWithUserID   uuid.UUID   `json:"shared_with_user_id"`
+	SplitAmount        int32       `json:"split_amount"`
+	OriginalTotal      int32       `json:"original_total"`
+	Status             string      `json:"status"`
+	RecipientExpenseID pgtype.UUID `json:"recipient_expense_id"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+}
+
 type User struct {
 	ID           uuid.UUID `json:"id"`
 	Email        string    `json:"email"`

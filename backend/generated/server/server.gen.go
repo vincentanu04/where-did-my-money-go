@@ -24,6 +24,12 @@ const (
 	Yearly  ExpenseExportRequestType = "yearly"
 )
 
+// BadgeCount defines model for BadgeCount.
+type BadgeCount struct {
+	FriendRequests int `json:"friendRequests"`
+	PendingShares  int `json:"pendingShares"`
+}
+
 // CategorySummary defines model for CategorySummary.
 type CategorySummary struct {
 	Category string `json:"category"`
@@ -53,11 +59,13 @@ type Date struct {
 
 // Expense defines model for Expense.
 type Expense struct {
-	Amount   int                `json:"amount"`
-	Category string             `json:"category"`
-	Date     time.Time          `json:"date"`
-	Id       openapi_types.UUID `json:"id"`
-	Remark   *string            `json:"remark,omitempty"`
+	Amount            int                `json:"amount"`
+	Category          string             `json:"category"`
+	Date              time.Time          `json:"date"`
+	Id                openapi_types.UUID `json:"id"`
+	PendingShareCount *int               `json:"pendingShareCount,omitempty"`
+	Remark            *string            `json:"remark,omitempty"`
+	SharedFromEmail   *string            `json:"sharedFromEmail,omitempty"`
 }
 
 // ExpenseExportRequest defines model for ExpenseExportRequest.
@@ -78,6 +86,43 @@ type ExpenseExportRequestType string
 type ExpensesByCategory struct {
 	Category string    `json:"category"`
 	Expenses []Expense `json:"expenses"`
+}
+
+// Friend defines model for Friend.
+type Friend struct {
+	Email        string             `json:"email"`
+	FriendshipId openapi_types.UUID `json:"friendshipId"`
+	Id           openapi_types.UUID `json:"id"`
+}
+
+// FriendRequest defines model for FriendRequest.
+type FriendRequest struct {
+	CreatedAt      time.Time          `json:"createdAt"`
+	Id             openapi_types.UUID `json:"id"`
+	RequesterEmail string             `json:"requesterEmail"`
+	RequesterId    openapi_types.UUID `json:"requesterId"`
+}
+
+// PendingShare defines model for PendingShare.
+type PendingShare struct {
+	Category      string             `json:"category"`
+	ExpenseDate   time.Time          `json:"expenseDate"`
+	Id            openapi_types.UUID `json:"id"`
+	OriginalTotal int                `json:"originalTotal"`
+	SharedByEmail string             `json:"sharedByEmail"`
+	SharedById    openapi_types.UUID `json:"sharedById"`
+	SplitAmount   int                `json:"splitAmount"`
+}
+
+// ShareExpenseRequest defines model for ShareExpenseRequest.
+type ShareExpenseRequest struct {
+	Splits []ShareSplit `json:"splits"`
+}
+
+// ShareSplit defines model for ShareSplit.
+type ShareSplit struct {
+	Amount   int                `json:"amount"`
+	FriendId openapi_types.UUID `json:"friendId"`
 }
 
 // UpdateExpense defines model for UpdateExpense.
@@ -111,6 +156,11 @@ type GetExpensesDailyTotalsParams struct {
 	Year  int `form:"year" json:"year"`
 }
 
+// PostFriendsRequestJSONBody defines parameters for PostFriendsRequest.
+type PostFriendsRequestJSONBody struct {
+	Email string `json:"email"`
+}
+
 // GetSummaryParams defines parameters for GetSummary.
 type GetSummaryParams struct {
 	Date openapi_types.Date `form:"date" json:"date"`
@@ -133,6 +183,12 @@ type PostExpensesListJSONRequestBody = Date
 
 // PutExpensesIdJSONRequestBody defines body for PutExpensesId for application/json ContentType.
 type PutExpensesIdJSONRequestBody = UpdateExpense
+
+// PostExpensesIdShareJSONRequestBody defines body for PostExpensesIdShare for application/json ContentType.
+type PostExpensesIdShareJSONRequestBody = ShareExpenseRequest
+
+// PostFriendsRequestJSONRequestBody defines body for PostFriendsRequest for application/json ContentType.
+type PostFriendsRequestJSONRequestBody PostFriendsRequestJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -160,12 +216,45 @@ type ServerInterface interface {
 	// List expenses for a date
 	// (POST /expenses/list)
 	PostExpensesList(w http.ResponseWriter, r *http.Request)
+	// List pending shared expenses addressed to current user
+	// (GET /expenses/shared/pending)
+	GetExpensesSharedPending(w http.ResponseWriter, r *http.Request)
+	// Accept a shared expense split
+	// (POST /expenses/shared/{shareId}/accept)
+	PostExpensesSharedShareIdAccept(w http.ResponseWriter, r *http.Request, shareId openapi_types.UUID)
+	// Reject a shared expense split
+	// (POST /expenses/shared/{shareId}/reject)
+	PostExpensesSharedShareIdReject(w http.ResponseWriter, r *http.Request, shareId openapi_types.UUID)
 	// Delete an expense
 	// (DELETE /expenses/{id})
 	DeleteExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Update an expense
 	// (PUT /expenses/{id})
 	PutExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Share an expense with friends (cost-split)
+	// (POST /expenses/{id}/share)
+	PostExpensesIdShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// List accepted friends
+	// (GET /friends)
+	GetFriends(w http.ResponseWriter, r *http.Request)
+	// Send a friend request by email
+	// (POST /friends/request)
+	PostFriendsRequest(w http.ResponseWriter, r *http.Request)
+	// List incoming pending friend requests
+	// (GET /friends/requests)
+	GetFriendsRequests(w http.ResponseWriter, r *http.Request)
+	// Remove a friend
+	// (DELETE /friends/{id})
+	DeleteFriendsId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Accept a friend request
+	// (POST /friends/{id}/accept)
+	PostFriendsIdAccept(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Reject a friend request
+	// (POST /friends/{id}/reject)
+	PostFriendsIdReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Count of pending friend requests + pending shared expenses
+	// (GET /notifications/badge)
+	GetNotificationsBadge(w http.ResponseWriter, r *http.Request)
 	// Category summary for a date
 	// (GET /summary)
 	GetSummary(w http.ResponseWriter, r *http.Request, params GetSummaryParams)
@@ -221,6 +310,24 @@ func (_ Unimplemented) PostExpensesList(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List pending shared expenses addressed to current user
+// (GET /expenses/shared/pending)
+func (_ Unimplemented) GetExpensesSharedPending(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Accept a shared expense split
+// (POST /expenses/shared/{shareId}/accept)
+func (_ Unimplemented) PostExpensesSharedShareIdAccept(w http.ResponseWriter, r *http.Request, shareId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reject a shared expense split
+// (POST /expenses/shared/{shareId}/reject)
+func (_ Unimplemented) PostExpensesSharedShareIdReject(w http.ResponseWriter, r *http.Request, shareId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Delete an expense
 // (DELETE /expenses/{id})
 func (_ Unimplemented) DeleteExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -230,6 +337,54 @@ func (_ Unimplemented) DeleteExpensesId(w http.ResponseWriter, r *http.Request, 
 // Update an expense
 // (PUT /expenses/{id})
 func (_ Unimplemented) PutExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Share an expense with friends (cost-split)
+// (POST /expenses/{id}/share)
+func (_ Unimplemented) PostExpensesIdShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List accepted friends
+// (GET /friends)
+func (_ Unimplemented) GetFriends(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Send a friend request by email
+// (POST /friends/request)
+func (_ Unimplemented) PostFriendsRequest(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List incoming pending friend requests
+// (GET /friends/requests)
+func (_ Unimplemented) GetFriendsRequests(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a friend
+// (DELETE /friends/{id})
+func (_ Unimplemented) DeleteFriendsId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Accept a friend request
+// (POST /friends/{id}/accept)
+func (_ Unimplemented) PostFriendsIdAccept(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reject a friend request
+// (POST /friends/{id}/reject)
+func (_ Unimplemented) PostFriendsIdReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Count of pending friend requests + pending shared expenses
+// (GET /notifications/badge)
+func (_ Unimplemented) GetNotificationsBadge(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -395,6 +550,70 @@ func (siw *ServerInterfaceWrapper) PostExpensesList(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetExpensesSharedPending operation middleware
+func (siw *ServerInterfaceWrapper) GetExpensesSharedPending(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExpensesSharedPending(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostExpensesSharedShareIdAccept operation middleware
+func (siw *ServerInterfaceWrapper) PostExpensesSharedShareIdAccept(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "shareId" -------------
+	var shareId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "shareId", chi.URLParam(r, "shareId"), &shareId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "shareId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostExpensesSharedShareIdAccept(w, r, shareId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostExpensesSharedShareIdReject operation middleware
+func (siw *ServerInterfaceWrapper) PostExpensesSharedShareIdReject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "shareId" -------------
+	var shareId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "shareId", chi.URLParam(r, "shareId"), &shareId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "shareId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostExpensesSharedShareIdReject(w, r, shareId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteExpensesId operation middleware
 func (siw *ServerInterfaceWrapper) DeleteExpensesId(w http.ResponseWriter, r *http.Request) {
 
@@ -436,6 +655,162 @@ func (siw *ServerInterfaceWrapper) PutExpensesId(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PutExpensesId(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostExpensesIdShare operation middleware
+func (siw *ServerInterfaceWrapper) PostExpensesIdShare(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostExpensesIdShare(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFriends operation middleware
+func (siw *ServerInterfaceWrapper) GetFriends(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFriends(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostFriendsRequest operation middleware
+func (siw *ServerInterfaceWrapper) PostFriendsRequest(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostFriendsRequest(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFriendsRequests operation middleware
+func (siw *ServerInterfaceWrapper) GetFriendsRequests(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFriendsRequests(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteFriendsId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteFriendsId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteFriendsId(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostFriendsIdAccept operation middleware
+func (siw *ServerInterfaceWrapper) PostFriendsIdAccept(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostFriendsIdAccept(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostFriendsIdReject operation middleware
+func (siw *ServerInterfaceWrapper) PostFriendsIdReject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostFriendsIdReject(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNotificationsBadge operation middleware
+func (siw *ServerInterfaceWrapper) GetNotificationsBadge(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNotificationsBadge(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -617,10 +992,43 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/expenses/list", wrapper.PostExpensesList)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/expenses/shared/pending", wrapper.GetExpensesSharedPending)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/expenses/shared/{shareId}/accept", wrapper.PostExpensesSharedShareIdAccept)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/expenses/shared/{shareId}/reject", wrapper.PostExpensesSharedShareIdReject)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/expenses/{id}", wrapper.DeleteExpensesId)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/expenses/{id}", wrapper.PutExpensesId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/expenses/{id}/share", wrapper.PostExpensesIdShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/friends", wrapper.GetFriends)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/friends/request", wrapper.PostFriendsRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/friends/requests", wrapper.GetFriendsRequests)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/friends/{id}", wrapper.DeleteFriendsId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/friends/{id}/accept", wrapper.PostFriendsIdAccept)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/friends/{id}/reject", wrapper.PostFriendsIdReject)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/notifications/badge", wrapper.GetNotificationsBadge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/summary", wrapper.GetSummary)
@@ -804,6 +1212,71 @@ func (response PostExpensesList200JSONResponse) VisitPostExpensesListResponse(w 
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetExpensesSharedPendingRequestObject struct {
+}
+
+type GetExpensesSharedPendingResponseObject interface {
+	VisitGetExpensesSharedPendingResponse(w http.ResponseWriter) error
+}
+
+type GetExpensesSharedPending200JSONResponse []PendingShare
+
+func (response GetExpensesSharedPending200JSONResponse) VisitGetExpensesSharedPendingResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostExpensesSharedShareIdAcceptRequestObject struct {
+	ShareId openapi_types.UUID `json:"shareId"`
+}
+
+type PostExpensesSharedShareIdAcceptResponseObject interface {
+	VisitPostExpensesSharedShareIdAcceptResponse(w http.ResponseWriter) error
+}
+
+type PostExpensesSharedShareIdAccept201JSONResponse Expense
+
+func (response PostExpensesSharedShareIdAccept201JSONResponse) VisitPostExpensesSharedShareIdAcceptResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostExpensesSharedShareIdAccept404Response struct {
+}
+
+func (response PostExpensesSharedShareIdAccept404Response) VisitPostExpensesSharedShareIdAcceptResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type PostExpensesSharedShareIdRejectRequestObject struct {
+	ShareId openapi_types.UUID `json:"shareId"`
+}
+
+type PostExpensesSharedShareIdRejectResponseObject interface {
+	VisitPostExpensesSharedShareIdRejectResponse(w http.ResponseWriter) error
+}
+
+type PostExpensesSharedShareIdReject204Response struct {
+}
+
+func (response PostExpensesSharedShareIdReject204Response) VisitPostExpensesSharedShareIdRejectResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostExpensesSharedShareIdReject404Response struct {
+}
+
+func (response PostExpensesSharedShareIdReject404Response) VisitPostExpensesSharedShareIdRejectResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
 type DeleteExpensesIdRequestObject struct {
 	Id openapi_types.UUID `json:"id"`
 }
@@ -853,6 +1326,199 @@ func (response PutExpensesId404Response) VisitPutExpensesIdResponse(w http.Respo
 	return nil
 }
 
+type PutExpensesId409Response struct {
+}
+
+func (response PutExpensesId409Response) VisitPutExpensesIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(409)
+	return nil
+}
+
+type PostExpensesIdShareRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *PostExpensesIdShareJSONRequestBody
+}
+
+type PostExpensesIdShareResponseObject interface {
+	VisitPostExpensesIdShareResponse(w http.ResponseWriter) error
+}
+
+type PostExpensesIdShare204Response struct {
+}
+
+func (response PostExpensesIdShare204Response) VisitPostExpensesIdShareResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostExpensesIdShare400Response struct {
+}
+
+func (response PostExpensesIdShare400Response) VisitPostExpensesIdShareResponse(w http.ResponseWriter) error {
+	w.WriteHeader(400)
+	return nil
+}
+
+type PostExpensesIdShare403Response struct {
+}
+
+func (response PostExpensesIdShare403Response) VisitPostExpensesIdShareResponse(w http.ResponseWriter) error {
+	w.WriteHeader(403)
+	return nil
+}
+
+type PostExpensesIdShare404Response struct {
+}
+
+func (response PostExpensesIdShare404Response) VisitPostExpensesIdShareResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type GetFriendsRequestObject struct {
+}
+
+type GetFriendsResponseObject interface {
+	VisitGetFriendsResponse(w http.ResponseWriter) error
+}
+
+type GetFriends200JSONResponse []Friend
+
+func (response GetFriends200JSONResponse) VisitGetFriendsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostFriendsRequestRequestObject struct {
+	Body *PostFriendsRequestJSONRequestBody
+}
+
+type PostFriendsRequestResponseObject interface {
+	VisitPostFriendsRequestResponse(w http.ResponseWriter) error
+}
+
+type PostFriendsRequest204Response struct {
+}
+
+func (response PostFriendsRequest204Response) VisitPostFriendsRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostFriendsRequest404Response struct {
+}
+
+func (response PostFriendsRequest404Response) VisitPostFriendsRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type PostFriendsRequest409Response struct {
+}
+
+func (response PostFriendsRequest409Response) VisitPostFriendsRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(409)
+	return nil
+}
+
+type GetFriendsRequestsRequestObject struct {
+}
+
+type GetFriendsRequestsResponseObject interface {
+	VisitGetFriendsRequestsResponse(w http.ResponseWriter) error
+}
+
+type GetFriendsRequests200JSONResponse []FriendRequest
+
+func (response GetFriendsRequests200JSONResponse) VisitGetFriendsRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteFriendsIdRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteFriendsIdResponseObject interface {
+	VisitDeleteFriendsIdResponse(w http.ResponseWriter) error
+}
+
+type DeleteFriendsId204Response struct {
+}
+
+func (response DeleteFriendsId204Response) VisitDeleteFriendsIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostFriendsIdAcceptRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostFriendsIdAcceptResponseObject interface {
+	VisitPostFriendsIdAcceptResponse(w http.ResponseWriter) error
+}
+
+type PostFriendsIdAccept204Response struct {
+}
+
+func (response PostFriendsIdAccept204Response) VisitPostFriendsIdAcceptResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostFriendsIdAccept404Response struct {
+}
+
+func (response PostFriendsIdAccept404Response) VisitPostFriendsIdAcceptResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type PostFriendsIdRejectRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type PostFriendsIdRejectResponseObject interface {
+	VisitPostFriendsIdRejectResponse(w http.ResponseWriter) error
+}
+
+type PostFriendsIdReject204Response struct {
+}
+
+func (response PostFriendsIdReject204Response) VisitPostFriendsIdRejectResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PostFriendsIdReject404Response struct {
+}
+
+func (response PostFriendsIdReject404Response) VisitPostFriendsIdRejectResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type GetNotificationsBadgeRequestObject struct {
+}
+
+type GetNotificationsBadgeResponseObject interface {
+	VisitGetNotificationsBadgeResponse(w http.ResponseWriter) error
+}
+
+type GetNotificationsBadge200JSONResponse BadgeCount
+
+func (response GetNotificationsBadge200JSONResponse) VisitGetNotificationsBadgeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetSummaryRequestObject struct {
 	Params GetSummaryParams
 }
@@ -896,12 +1562,45 @@ type StrictServerInterface interface {
 	// List expenses for a date
 	// (POST /expenses/list)
 	PostExpensesList(ctx context.Context, request PostExpensesListRequestObject) (PostExpensesListResponseObject, error)
+	// List pending shared expenses addressed to current user
+	// (GET /expenses/shared/pending)
+	GetExpensesSharedPending(ctx context.Context, request GetExpensesSharedPendingRequestObject) (GetExpensesSharedPendingResponseObject, error)
+	// Accept a shared expense split
+	// (POST /expenses/shared/{shareId}/accept)
+	PostExpensesSharedShareIdAccept(ctx context.Context, request PostExpensesSharedShareIdAcceptRequestObject) (PostExpensesSharedShareIdAcceptResponseObject, error)
+	// Reject a shared expense split
+	// (POST /expenses/shared/{shareId}/reject)
+	PostExpensesSharedShareIdReject(ctx context.Context, request PostExpensesSharedShareIdRejectRequestObject) (PostExpensesSharedShareIdRejectResponseObject, error)
 	// Delete an expense
 	// (DELETE /expenses/{id})
 	DeleteExpensesId(ctx context.Context, request DeleteExpensesIdRequestObject) (DeleteExpensesIdResponseObject, error)
 	// Update an expense
 	// (PUT /expenses/{id})
 	PutExpensesId(ctx context.Context, request PutExpensesIdRequestObject) (PutExpensesIdResponseObject, error)
+	// Share an expense with friends (cost-split)
+	// (POST /expenses/{id}/share)
+	PostExpensesIdShare(ctx context.Context, request PostExpensesIdShareRequestObject) (PostExpensesIdShareResponseObject, error)
+	// List accepted friends
+	// (GET /friends)
+	GetFriends(ctx context.Context, request GetFriendsRequestObject) (GetFriendsResponseObject, error)
+	// Send a friend request by email
+	// (POST /friends/request)
+	PostFriendsRequest(ctx context.Context, request PostFriendsRequestRequestObject) (PostFriendsRequestResponseObject, error)
+	// List incoming pending friend requests
+	// (GET /friends/requests)
+	GetFriendsRequests(ctx context.Context, request GetFriendsRequestsRequestObject) (GetFriendsRequestsResponseObject, error)
+	// Remove a friend
+	// (DELETE /friends/{id})
+	DeleteFriendsId(ctx context.Context, request DeleteFriendsIdRequestObject) (DeleteFriendsIdResponseObject, error)
+	// Accept a friend request
+	// (POST /friends/{id}/accept)
+	PostFriendsIdAccept(ctx context.Context, request PostFriendsIdAcceptRequestObject) (PostFriendsIdAcceptResponseObject, error)
+	// Reject a friend request
+	// (POST /friends/{id}/reject)
+	PostFriendsIdReject(ctx context.Context, request PostFriendsIdRejectRequestObject) (PostFriendsIdRejectResponseObject, error)
+	// Count of pending friend requests + pending shared expenses
+	// (GET /notifications/badge)
+	GetNotificationsBadge(ctx context.Context, request GetNotificationsBadgeRequestObject) (GetNotificationsBadgeResponseObject, error)
 	// Category summary for a date
 	// (GET /summary)
 	GetSummary(ctx context.Context, request GetSummaryRequestObject) (GetSummaryResponseObject, error)
@@ -1165,6 +1864,82 @@ func (sh *strictHandler) PostExpensesList(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GetExpensesSharedPending operation middleware
+func (sh *strictHandler) GetExpensesSharedPending(w http.ResponseWriter, r *http.Request) {
+	var request GetExpensesSharedPendingRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetExpensesSharedPending(ctx, request.(GetExpensesSharedPendingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetExpensesSharedPending")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetExpensesSharedPendingResponseObject); ok {
+		if err := validResponse.VisitGetExpensesSharedPendingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostExpensesSharedShareIdAccept operation middleware
+func (sh *strictHandler) PostExpensesSharedShareIdAccept(w http.ResponseWriter, r *http.Request, shareId openapi_types.UUID) {
+	var request PostExpensesSharedShareIdAcceptRequestObject
+
+	request.ShareId = shareId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostExpensesSharedShareIdAccept(ctx, request.(PostExpensesSharedShareIdAcceptRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostExpensesSharedShareIdAccept")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostExpensesSharedShareIdAcceptResponseObject); ok {
+		if err := validResponse.VisitPostExpensesSharedShareIdAcceptResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostExpensesSharedShareIdReject operation middleware
+func (sh *strictHandler) PostExpensesSharedShareIdReject(w http.ResponseWriter, r *http.Request, shareId openapi_types.UUID) {
+	var request PostExpensesSharedShareIdRejectRequestObject
+
+	request.ShareId = shareId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostExpensesSharedShareIdReject(ctx, request.(PostExpensesSharedShareIdRejectRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostExpensesSharedShareIdReject")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostExpensesSharedShareIdRejectResponseObject); ok {
+		if err := validResponse.VisitPostExpensesSharedShareIdRejectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // DeleteExpensesId operation middleware
 func (sh *strictHandler) DeleteExpensesId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	var request DeleteExpensesIdRequestObject
@@ -1217,6 +1992,220 @@ func (sh *strictHandler) PutExpensesId(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PutExpensesIdResponseObject); ok {
 		if err := validResponse.VisitPutExpensesIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostExpensesIdShare operation middleware
+func (sh *strictHandler) PostExpensesIdShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostExpensesIdShareRequestObject
+
+	request.Id = id
+
+	var body PostExpensesIdShareJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostExpensesIdShare(ctx, request.(PostExpensesIdShareRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostExpensesIdShare")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostExpensesIdShareResponseObject); ok {
+		if err := validResponse.VisitPostExpensesIdShareResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetFriends operation middleware
+func (sh *strictHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
+	var request GetFriendsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetFriends(ctx, request.(GetFriendsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetFriends")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetFriendsResponseObject); ok {
+		if err := validResponse.VisitGetFriendsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostFriendsRequest operation middleware
+func (sh *strictHandler) PostFriendsRequest(w http.ResponseWriter, r *http.Request) {
+	var request PostFriendsRequestRequestObject
+
+	var body PostFriendsRequestJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostFriendsRequest(ctx, request.(PostFriendsRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostFriendsRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostFriendsRequestResponseObject); ok {
+		if err := validResponse.VisitPostFriendsRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetFriendsRequests operation middleware
+func (sh *strictHandler) GetFriendsRequests(w http.ResponseWriter, r *http.Request) {
+	var request GetFriendsRequestsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetFriendsRequests(ctx, request.(GetFriendsRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetFriendsRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetFriendsRequestsResponseObject); ok {
+		if err := validResponse.VisitGetFriendsRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteFriendsId operation middleware
+func (sh *strictHandler) DeleteFriendsId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeleteFriendsIdRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteFriendsId(ctx, request.(DeleteFriendsIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteFriendsId")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteFriendsIdResponseObject); ok {
+		if err := validResponse.VisitDeleteFriendsIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostFriendsIdAccept operation middleware
+func (sh *strictHandler) PostFriendsIdAccept(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostFriendsIdAcceptRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostFriendsIdAccept(ctx, request.(PostFriendsIdAcceptRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostFriendsIdAccept")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostFriendsIdAcceptResponseObject); ok {
+		if err := validResponse.VisitPostFriendsIdAcceptResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PostFriendsIdReject operation middleware
+func (sh *strictHandler) PostFriendsIdReject(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PostFriendsIdRejectRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostFriendsIdReject(ctx, request.(PostFriendsIdRejectRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostFriendsIdReject")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostFriendsIdRejectResponseObject); ok {
+		if err := validResponse.VisitPostFriendsIdRejectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetNotificationsBadge operation middleware
+func (sh *strictHandler) GetNotificationsBadge(w http.ResponseWriter, r *http.Request) {
+	var request GetNotificationsBadgeRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetNotificationsBadge(ctx, request.(GetNotificationsBadgeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetNotificationsBadge")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetNotificationsBadgeResponseObject); ok {
+		if err := validResponse.VisitGetNotificationsBadgeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

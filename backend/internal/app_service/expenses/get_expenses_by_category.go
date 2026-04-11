@@ -33,6 +33,27 @@ func GetExpensesByCategory(ctx context.Context, deps deps.Deps, date int, month 
 		return nil, err
 	}
 
+	// Build maps for sharing annotations (2 extra queries, not N+1)
+	pendingCounts := make(map[[16]byte]int)
+	pendingRows, err := db.ListPendingShareCountsByExpense(ctx, userID)
+	if err == nil {
+		for _, row := range pendingRows {
+			if row.SourceExpenseID.Valid {
+				pendingCounts[row.SourceExpenseID.Bytes] = int(row.PendingCount)
+			}
+		}
+	}
+
+	sharedFromEmails := make(map[[16]byte]string)
+	recipientRows, err := db.ListSharedFromEmailForRecipient(ctx, userID)
+	if err == nil {
+		for _, row := range recipientRows {
+			if row.RecipientExpenseID.Valid {
+				sharedFromEmails[row.RecipientExpenseID.Bytes] = row.SharedByEmail
+			}
+		}
+	}
+
 	grouped := make(map[string][]oapi.Expense)
 	categoryOrder := make([]string, 0)
 
@@ -41,13 +62,21 @@ func GetExpensesByCategory(ctx context.Context, deps deps.Deps, date int, month 
 			categoryOrder = append(categoryOrder, e.Category)
 		}
 
-		grouped[e.Category] = append(grouped[e.Category], oapi.Expense{
+		exp := oapi.Expense{
 			Id:       e.ID,
 			Category: e.Category,
 			Amount:   int(e.Amount),
 			Date:     e.ExpenseDate,
 			Remark:   &e.Remark.String,
-		})
+		}
+		if count, ok := pendingCounts[e.ID]; ok {
+			exp.PendingShareCount = &count
+		}
+		if email, ok := sharedFromEmails[e.ID]; ok {
+			exp.SharedFromEmail = &email
+		}
+
+		grouped[e.Category] = append(grouped[e.Category], exp)
 	}
 
 	// build response (categories already alphabetical from SQL)

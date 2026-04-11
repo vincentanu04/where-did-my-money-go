@@ -5,6 +5,8 @@ import History from "@/pages/History"
 import Login from './pages/Login'
 import RequireAuth from './layouts/RequireAuth'
 import Register from './pages/Register'
+import Friends from './pages/Friends'
+import PendingShares from './pages/PendingShares'
 
 export default function App() {
   return (
@@ -16,6 +18,8 @@ export default function App() {
           <Route element={<RequireAuth />}>
               <Route path="/" element={<Home />} />
               <Route path="/history" element={<History />} />
+              <Route path="/friends" element={<Friends />} />
+              <Route path="/pending-shares" element={<PendingShares />} />
           </Route>
         </Route>
       </Routes>

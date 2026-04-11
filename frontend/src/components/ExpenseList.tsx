@@ -9,7 +9,8 @@ import { Spinner } from './ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Share2, Clock } from 'lucide-react'
+import { ShareExpenseDialog } from '@/components/ShareExpenseDialog'
 
 type Props = {
   expenses: ExpensesByCategory[]
@@ -19,6 +20,7 @@ type Props = {
 
 export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [sharingExpense, setSharingExpense] = useState<Expense | null>(null)
   const [amount, setAmount] = useState<string>('') // 👈 string
   const [remark, setRemark] = useState('')
 
@@ -29,8 +31,12 @@ export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
     useDeleteExpensesByIdMutation()
 
   const startEdit = (expense: Expense) => {
+    if (expense.pendingShareCount && expense.pendingShareCount > 0) {
+      toast.error(`Can't edit — ${expense.pendingShareCount} pending share${expense.pendingShareCount > 1 ? 's' : ''} must be resolved first`)
+      return
+    }
     setEditingId(expense.id)
-    setAmount(String(expense.amount)) // 👈 string init
+    setAmount(String(expense.amount))
     setRemark(expense.remark ?? '')
   }
 
@@ -65,11 +71,15 @@ export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
     }
   }
 
-  const onDelete = async (id: string) => {
-    if (!confirm('Delete this expense?')) return
+  const onDelete = async (expense: Expense) => {
+    const hasPending = expense.pendingShareCount && expense.pendingShareCount > 0
+    const msg = hasPending
+      ? `Delete this expense? This will also cancel ${expense.pendingShareCount} pending share${expense.pendingShareCount ?? 0 > 1 ? 's' : ''}.`
+      : 'Delete this expense?'
+    if (!confirm(msg)) return
 
     try {
-      await deleteExpense({ id }).unwrap()
+      await deleteExpense({ id: expense.id }).unwrap()
       toast.success('Expense deleted')
       onChanged()
     } catch {
@@ -94,6 +104,7 @@ export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
   }
 
   return (
+    <>
     <Card className="p-4 space-y-4">
       {expenses.map(category => (
         <div key={category.category} className="space-y-2">
@@ -153,14 +164,37 @@ export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
                   ) : (
                     /* ===== View mode (always one row) ===== */
                     <>
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span>¥{expense.amount}</span>
-                        <span className="italic text-gray-500 truncate">
-                          {expense.remark || ''}
-                        </span>
+                      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span>¥{expense.amount}</span>
+                          <span className="italic text-gray-500 truncate">
+                            {expense.remark || ''}
+                          </span>
+                        </div>
+                        {expense.pendingShareCount != null && expense.pendingShareCount > 0 && (
+                          <span className="flex items-center gap-1 text-xs text-amber-600">
+                            <Clock className="h-3 w-3" />
+                            {expense.pendingShareCount} pending acceptance
+                          </span>
+                        )}
+                        {expense.sharedFromEmail && (
+                          <span className="text-xs text-muted-foreground">
+                            ↙ from {expense.sharedFromEmail}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex gap-1 shrink-0">
+                        {!expense.sharedFromEmail && !expense.pendingShareCount && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setSharingExpense(expense)}
+                            title="Share expense"
+                          >
+                            <Share2 className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -171,7 +205,7 @@ export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => onDelete(expense.id)}
+                          onClick={() => onDelete(expense)}
                           disabled={isDeleting}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -199,5 +233,17 @@ export const ExpenseList = ({ expenses, isLoading, onChanged }: Props) => {
         )}
       </div>
     </Card>
+
+    {sharingExpense && (
+      <ShareExpenseDialog
+        expense={sharingExpense}
+        onClose={() => setSharingExpense(null)}
+        onShared={() => {
+          setSharingExpense(null)
+          onChanged()
+        }}
+      />
+    )}
+  </>
   )
 }

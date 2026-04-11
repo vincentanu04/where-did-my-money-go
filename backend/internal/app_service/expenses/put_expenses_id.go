@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
 	sqlc "github.com/vincentanu04/where-did-my-money-go/internal/db/generated"
 	"github.com/vincentanu04/where-did-my-money-go/internal/deps"
 	"github.com/vincentanu04/where-did-my-money-go/internal/server/middleware"
@@ -16,7 +17,7 @@ func UpdateExpense(
 	expenseID uuid.UUID,
 	amount *int,
 	remark *string,
-) error {
+) (oapi.PutExpensesIdResponseObject, error) {
 	userID := middleware.UserIDFromContext(ctx)
 
 	existing, err := deps.DB.GetExpenseByIDAndUser(
@@ -27,7 +28,16 @@ func UpdateExpense(
 		},
 	)
 	if err != nil {
-		return err
+		return oapi.PutExpensesId404Response{}, nil
+	}
+
+	// Block edit if there are pending shares
+	pendingCount, err := deps.DB.CountPendingSplitsForExpense(ctx, pgtype.UUID{Bytes: expenseID, Valid: true})
+	if err != nil {
+		return nil, err
+	}
+	if pendingCount > 0 {
+		return oapi.PutExpensesId409Response{}, nil
 	}
 
 	updatedAmount := existing.Amount
@@ -52,8 +62,8 @@ func UpdateExpense(
 		},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return oapi.PutExpensesId204Response{}, nil
 }

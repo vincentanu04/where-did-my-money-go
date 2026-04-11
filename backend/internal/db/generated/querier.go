@@ -8,17 +8,38 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	CancelPendingSplitsForExpense(ctx context.Context, sourceExpenseID pgtype.UUID) error
+	CountPendingFriendRequests(ctx context.Context, addresseeID uuid.UUID) (int32, error)
+	CountPendingSharedSplitsForUser(ctx context.Context, sharedWithUserID uuid.UUID) (int32, error)
+	CountPendingSplitsForExpense(ctx context.Context, sourceExpenseID pgtype.UUID) (int32, error)
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (CreateExpenseRow, error)
+	CreateFriendship(ctx context.Context, arg CreateFriendshipParams) (Friendship, error)
+	CreateSharedExpenseSplit(ctx context.Context, arg CreateSharedExpenseSplitParams) (SharedExpenseSplit, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
-	DeleteExpense(ctx context.Context, id uuid.UUID) error
+	DeleteExpense(ctx context.Context, arg DeleteExpenseParams) error
+	DeleteFriendship(ctx context.Context, arg DeleteFriendshipParams) error
+	GetExpenseByID(ctx context.Context, id uuid.UUID) (Expense, error)
 	GetExpenseByIDAndUser(ctx context.Context, arg GetExpenseByIDAndUserParams) (Expense, error)
+	GetFriendshipByID(ctx context.Context, id uuid.UUID) (Friendship, error)
+	GetFriendshipByPair(ctx context.Context, arg GetFriendshipByPairParams) (Friendship, error)
+	GetSharedSplitByID(ctx context.Context, id uuid.UUID) (SharedExpenseSplit, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	GetUserById(ctx context.Context, id uuid.UUID) (User, error)
+	ListAcceptedFriendships(ctx context.Context, requesterID uuid.UUID) ([]Friendship, error)
 	ListExpensesByUserAndRange(ctx context.Context, arg ListExpensesByUserAndRangeParams) ([]Expense, error)
+	ListPendingIncomingRequests(ctx context.Context, addresseeID uuid.UUID) ([]Friendship, error)
+	ListPendingShareCountsByExpense(ctx context.Context, sharedByUserID uuid.UUID) ([]ListPendingShareCountsByExpenseRow, error)
+	ListPendingSplitsForUser(ctx context.Context, sharedWithUserID uuid.UUID) ([]SharedExpenseSplit, error)
+	ListSharedFromEmailForRecipient(ctx context.Context, sharedWithUserID uuid.UUID) ([]ListSharedFromEmailForRecipientRow, error)
+	ListSplitsForExpense(ctx context.Context, sourceExpenseID pgtype.UUID) ([]SharedExpenseSplit, error)
+	SetSplitRecipientExpense(ctx context.Context, arg SetSplitRecipientExpenseParams) (SharedExpenseSplit, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (UpdateExpenseRow, error)
+	UpdateFriendshipStatus(ctx context.Context, arg UpdateFriendshipStatusParams) (Friendship, error)
+	UpdateSharedSplitStatus(ctx context.Context, arg UpdateSharedSplitStatusParams) (SharedExpenseSplit, error)
 }
 
 var _ Querier = (*Queries)(nil)
