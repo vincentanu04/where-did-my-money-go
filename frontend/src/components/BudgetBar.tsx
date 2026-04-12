@@ -29,7 +29,7 @@ export function BudgetBar() {
     )
   }
 
-  const { spentToday, todayAllowance, remainingToday, status } = data
+  const { spentToday, todayAllowance, status } = data
   const percentUsed = todayAllowance > 0 ? Math.min((spentToday / todayAllowance) * 100, 100) : 100
 
   const barColor =
