@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type BudgetSetting struct {
+	ID           uuid.UUID `json:"id"`
+	UserID       uuid.UUID `json:"user_id"`
+	DailyAmount  int32     `json:"daily_amount"`
+	ResetPeriod  string    `json:"reset_period"`
+	WeekStartDay int32     `json:"week_start_day"`
+	Active       bool      `json:"active"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 type Expense struct {
 	ID          uuid.UUID        `json:"id"`
 	UserID      uuid.UUID        `json:"user_id"`

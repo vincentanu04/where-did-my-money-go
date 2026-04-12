@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
-import { ArrowLeft, LogOut, Users, Bell } from "lucide-react"
+import { ArrowLeft, LogOut, Users, Bell, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -24,6 +24,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/history": "History",
   "/friends": "Friends",
   "/pending-shares": "Pending Shares",
+  "/budget": "Budget",
 }
 
 export default function AppLayout() {
@@ -113,6 +114,13 @@ export default function AppLayout() {
                 <div className="px-2 py-1 text-sm text-muted-foreground">
                   {user.email}
                 </div>
+                <DropdownMenuItem
+                  onClick={() => navigate('/budget')}
+                  className="cursor-pointer"
+                >
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Budget
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-destructive cursor-pointer"

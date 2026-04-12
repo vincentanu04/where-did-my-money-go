@@ -66,25 +66,32 @@ export function CalendarView({ date, onPrev, onNext, onDayClick, totals, isFetch
         <Button variant="ghost" size="icon" onClick={onPrev}>
           <ChevronLeft />
         </Button>
-        <div className="text-center">
-          <div className="font-semibold">
-            {date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-          </div>
-          {monthlyTotal > 0 && (
-            <div className="text-sm text-muted-foreground">
-              Total: <span className="font-medium text-foreground">¥{monthlyTotal.toLocaleString()}</span>
-            </div>
-          )}
-          {avgPerDay !== null && (
-            <div className="text-sm text-muted-foreground">
-              Avg/day: <span className="font-medium text-foreground">¥{avgPerDay.toLocaleString()}</span>
-            </div>
-          )}
+        <div className="font-semibold">
+          {date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
         </div>
         <Button variant="ghost" size="icon" onClick={onNext}>
           <ChevronRight />
         </Button>
       </div>
+
+      {/* Monthly stats */}
+      {monthlyTotal > 0 && (
+        <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground -mt-1">
+          <span>
+            Total{' '}
+            <span className="font-medium text-foreground">¥{monthlyTotal.toLocaleString()}</span>
+          </span>
+          {avgPerDay !== null && (
+            <>
+              <span className="text-border">·</span>
+              <span>
+                Avg/day{' '}
+                <span className="font-medium text-foreground">¥{avgPerDay.toLocaleString()}</span>
+              </span>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Weekday headers */}
       <div className="grid grid-cols-7 text-center text-xs text-muted-foreground">

@@ -35,3 +35,7 @@ migrate-down-only:
 ## Migrate codegen
 sqlc-codegen:
 	go tool sqlc generate -f internal/db/sqlc.yml
+
+## Run integration tests (requires a running DB)
+test:
+	DATABASE_URL=$(DATABASE_URL) JWT_SECRET=$(JWT_SECRET) go test ./integration/... -v -count=1

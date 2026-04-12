@@ -5,6 +5,7 @@ import App from './App.tsx'
 import { Provider } from 'react-redux'
 import { store } from './store/index.ts'
 import AuthBootstrap from './layouts/AuthBootstrap.tsx'
+import '@/api/tags'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

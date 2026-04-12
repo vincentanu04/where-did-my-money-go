@@ -3,6 +3,7 @@ import { DateHeader } from "@/components/DateHeader"
 import { CategoryGrid } from "@/components/CategoryGrid"
 import { AddExpenseModal, type SplitEntry } from "@/components/AddExpenseModal"
 import { FabHistory } from "@/components/FabHistory"
+import { BudgetBar } from "@/components/BudgetBar"
 import { useHomeDate } from "@/hooks/useHomeDate"
 import { usePostExpensesCreateMutation, usePostExpensesByIdShareMutation, type CreateExpense } from '@/api/client'
 import { toast } from 'sonner'
@@ -43,6 +44,7 @@ export default function Home() {
         onPrev={prevDay}
         onNext={nextDay}
       />
+      <BudgetBar />
       <CategoryGrid onSelect={setSelectedCategory} />
       {selectedCategory && (
         <AddExpenseModal

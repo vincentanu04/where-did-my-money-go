@@ -17,11 +17,31 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for BudgetHistoryEntryStatus.
+const (
+	OverBudget  BudgetHistoryEntryStatus = "over_budget"
+	UnderBudget BudgetHistoryEntryStatus = "under_budget"
+)
+
+// Defines values for BudgetSettingsResetPeriod.
+const (
+	BudgetSettingsResetPeriodMonthly BudgetSettingsResetPeriod = "monthly"
+	BudgetSettingsResetPeriodWeekly  BudgetSettingsResetPeriod = "weekly"
+)
+
+// Defines values for BudgetSummaryStatus.
+const (
+	GettingClose BudgetSummaryStatus = "getting_close"
+	OnTrack      BudgetSummaryStatus = "on_track"
+	OverPeriod   BudgetSummaryStatus = "over_period"
+	OverToday    BudgetSummaryStatus = "over_today"
+)
+
 // Defines values for ExpenseExportRequestType.
 const (
-	Monthly ExpenseExportRequestType = "monthly"
-	Range   ExpenseExportRequestType = "range"
-	Yearly  ExpenseExportRequestType = "yearly"
+	ExpenseExportRequestTypeMonthly ExpenseExportRequestType = "monthly"
+	ExpenseExportRequestTypeRange   ExpenseExportRequestType = "range"
+	ExpenseExportRequestTypeYearly  ExpenseExportRequestType = "yearly"
 )
 
 // BadgeCount defines model for BadgeCount.
@@ -29,6 +49,55 @@ type BadgeCount struct {
 	FriendRequests int `json:"friendRequests"`
 	PendingShares  int `json:"pendingShares"`
 }
+
+// BudgetDayBreakdown defines model for BudgetDayBreakdown.
+type BudgetDayBreakdown struct {
+	Allowance int                `json:"allowance"`
+	Date      openapi_types.Date `json:"date"`
+	Spent     *int               `json:"spent"`
+}
+
+// BudgetHistoryEntry defines model for BudgetHistoryEntry.
+type BudgetHistoryEntry struct {
+	DailyBreakdown []BudgetDayBreakdown     `json:"dailyBreakdown"`
+	PeriodEnd      openapi_types.Date       `json:"periodEnd"`
+	PeriodStart    openapi_types.Date       `json:"periodStart"`
+	PeriodTotal    int                      `json:"periodTotal"`
+	Status         BudgetHistoryEntryStatus `json:"status"`
+	TotalSpent     int                      `json:"totalSpent"`
+	UnderOver      int                      `json:"underOver"`
+}
+
+// BudgetHistoryEntryStatus defines model for BudgetHistoryEntry.Status.
+type BudgetHistoryEntryStatus string
+
+// BudgetSettings defines model for BudgetSettings.
+type BudgetSettings struct {
+	Active       bool                      `json:"active"`
+	DailyAmount  int                       `json:"dailyAmount"`
+	ResetPeriod  BudgetSettingsResetPeriod `json:"resetPeriod"`
+	WeekStartDay int                       `json:"weekStartDay"`
+}
+
+// BudgetSettingsResetPeriod defines model for BudgetSettings.ResetPeriod.
+type BudgetSettingsResetPeriod string
+
+// BudgetSummary defines model for BudgetSummary.
+type BudgetSummary struct {
+	DailyBreakdown  []BudgetDayBreakdown `json:"dailyBreakdown"`
+	PeriodEnd       openapi_types.Date   `json:"periodEnd"`
+	PeriodStart     openapi_types.Date   `json:"periodStart"`
+	PeriodTotal     int                  `json:"periodTotal"`
+	RemainingPeriod int                  `json:"remainingPeriod"`
+	RemainingToday  int                  `json:"remainingToday"`
+	SpentSoFar      int                  `json:"spentSoFar"`
+	SpentToday      int                  `json:"spentToday"`
+	Status          BudgetSummaryStatus  `json:"status"`
+	TodayAllowance  int                  `json:"todayAllowance"`
+}
+
+// BudgetSummaryStatus defines model for BudgetSummary.Status.
+type BudgetSummaryStatus string
 
 // CategorySummary defines model for CategorySummary.
 type CategorySummary struct {
@@ -150,6 +219,17 @@ type PostAuthRegisterJSONBody struct {
 	Password string `json:"password"`
 }
 
+// GetBudgetHistoryParams defines parameters for GetBudgetHistory.
+type GetBudgetHistoryParams struct {
+	Tz    string `form:"tz" json:"tz"`
+	Limit *int   `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetBudgetSummaryParams defines parameters for GetBudgetSummary.
+type GetBudgetSummaryParams struct {
+	Tz string `form:"tz" json:"tz"`
+}
+
 // GetExpensesDailyTotalsParams defines parameters for GetExpensesDailyTotals.
 type GetExpensesDailyTotalsParams struct {
 	Month int `form:"month" json:"month"`
@@ -171,6 +251,9 @@ type PostAuthLoginJSONRequestBody PostAuthLoginJSONBody
 
 // PostAuthRegisterJSONRequestBody defines body for PostAuthRegister for application/json ContentType.
 type PostAuthRegisterJSONRequestBody PostAuthRegisterJSONBody
+
+// PutBudgetSettingsJSONRequestBody defines body for PutBudgetSettings for application/json ContentType.
+type PutBudgetSettingsJSONRequestBody = BudgetSettings
 
 // PostExpensesCreateJSONRequestBody defines body for PostExpensesCreate for application/json ContentType.
 type PostExpensesCreateJSONRequestBody = CreateExpense
@@ -204,6 +287,18 @@ type ServerInterface interface {
 	// Register a new user
 	// (POST /auth/register)
 	PostAuthRegister(w http.ResponseWriter, r *http.Request)
+	// Get past period budget summaries
+	// (GET /budget/history)
+	GetBudgetHistory(w http.ResponseWriter, r *http.Request, params GetBudgetHistoryParams)
+	// Get budget settings
+	// (GET /budget/settings)
+	GetBudgetSettings(w http.ResponseWriter, r *http.Request)
+	// Create or update budget settings
+	// (PUT /budget/settings)
+	PutBudgetSettings(w http.ResponseWriter, r *http.Request)
+	// Get current period budget summary
+	// (GET /budget/summary)
+	GetBudgetSummary(w http.ResponseWriter, r *http.Request, params GetBudgetSummaryParams)
 	// Create an expense
 	// (POST /expenses/create)
 	PostExpensesCreate(w http.ResponseWriter, r *http.Request)
@@ -283,6 +378,30 @@ func (_ Unimplemented) GetAuthMe(w http.ResponseWriter, r *http.Request) {
 // Register a new user
 // (POST /auth/register)
 func (_ Unimplemented) PostAuthRegister(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get past period budget summaries
+// (GET /budget/history)
+func (_ Unimplemented) GetBudgetHistory(w http.ResponseWriter, r *http.Request, params GetBudgetHistoryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get budget settings
+// (GET /budget/settings)
+func (_ Unimplemented) GetBudgetSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create or update budget settings
+// (PUT /budget/settings)
+func (_ Unimplemented) PutBudgetSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get current period budget summary
+// (GET /budget/summary)
+func (_ Unimplemented) GetBudgetSummary(w http.ResponseWriter, r *http.Request, params GetBudgetSummaryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -450,6 +569,110 @@ func (siw *ServerInterfaceWrapper) PostAuthRegister(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAuthRegister(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBudgetHistory operation middleware
+func (siw *ServerInterfaceWrapper) GetBudgetHistory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBudgetHistoryParams
+
+	// ------------- Required query parameter "tz" -------------
+
+	if paramValue := r.URL.Query().Get("tz"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tz"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "tz", r.URL.Query(), &params.Tz)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tz", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBudgetHistory(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBudgetSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetBudgetSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBudgetSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutBudgetSettings operation middleware
+func (siw *ServerInterfaceWrapper) PutBudgetSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutBudgetSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBudgetSummary operation middleware
+func (siw *ServerInterfaceWrapper) GetBudgetSummary(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBudgetSummaryParams
+
+	// ------------- Required query parameter "tz" -------------
+
+	if paramValue := r.URL.Query().Get("tz"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tz"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "tz", r.URL.Query(), &params.Tz)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tz", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBudgetSummary(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -980,6 +1203,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/budget/history", wrapper.GetBudgetHistory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/budget/settings", wrapper.GetBudgetSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/budget/settings", wrapper.PutBudgetSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/budget/summary", wrapper.GetBudgetSummary)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/expenses/create", wrapper.PostExpensesCreate)
 	})
 	r.Group(func(r chi.Router) {
@@ -1131,6 +1366,97 @@ type PostAuthRegister409Response struct {
 
 func (response PostAuthRegister409Response) VisitPostAuthRegisterResponse(w http.ResponseWriter) error {
 	w.WriteHeader(409)
+	return nil
+}
+
+type GetBudgetHistoryRequestObject struct {
+	Params GetBudgetHistoryParams
+}
+
+type GetBudgetHistoryResponseObject interface {
+	VisitGetBudgetHistoryResponse(w http.ResponseWriter) error
+}
+
+type GetBudgetHistory200JSONResponse []BudgetHistoryEntry
+
+func (response GetBudgetHistory200JSONResponse) VisitGetBudgetHistoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetBudgetHistory404Response struct {
+}
+
+func (response GetBudgetHistory404Response) VisitGetBudgetHistoryResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type GetBudgetSettingsRequestObject struct {
+}
+
+type GetBudgetSettingsResponseObject interface {
+	VisitGetBudgetSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetBudgetSettings200JSONResponse BudgetSettings
+
+func (response GetBudgetSettings200JSONResponse) VisitGetBudgetSettingsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetBudgetSettings404Response struct {
+}
+
+func (response GetBudgetSettings404Response) VisitGetBudgetSettingsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type PutBudgetSettingsRequestObject struct {
+	Body *PutBudgetSettingsJSONRequestBody
+}
+
+type PutBudgetSettingsResponseObject interface {
+	VisitPutBudgetSettingsResponse(w http.ResponseWriter) error
+}
+
+type PutBudgetSettings200JSONResponse BudgetSettings
+
+func (response PutBudgetSettings200JSONResponse) VisitPutBudgetSettingsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetBudgetSummaryRequestObject struct {
+	Params GetBudgetSummaryParams
+}
+
+type GetBudgetSummaryResponseObject interface {
+	VisitGetBudgetSummaryResponse(w http.ResponseWriter) error
+}
+
+type GetBudgetSummary200JSONResponse BudgetSummary
+
+func (response GetBudgetSummary200JSONResponse) VisitGetBudgetSummaryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetBudgetSummary404Response struct {
+}
+
+func (response GetBudgetSummary404Response) VisitGetBudgetSummaryResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
 	return nil
 }
 
@@ -1550,6 +1876,18 @@ type StrictServerInterface interface {
 	// Register a new user
 	// (POST /auth/register)
 	PostAuthRegister(ctx context.Context, request PostAuthRegisterRequestObject) (PostAuthRegisterResponseObject, error)
+	// Get past period budget summaries
+	// (GET /budget/history)
+	GetBudgetHistory(ctx context.Context, request GetBudgetHistoryRequestObject) (GetBudgetHistoryResponseObject, error)
+	// Get budget settings
+	// (GET /budget/settings)
+	GetBudgetSettings(ctx context.Context, request GetBudgetSettingsRequestObject) (GetBudgetSettingsResponseObject, error)
+	// Create or update budget settings
+	// (PUT /budget/settings)
+	PutBudgetSettings(ctx context.Context, request PutBudgetSettingsRequestObject) (PutBudgetSettingsResponseObject, error)
+	// Get current period budget summary
+	// (GET /budget/summary)
+	GetBudgetSummary(ctx context.Context, request GetBudgetSummaryRequestObject) (GetBudgetSummaryResponseObject, error)
 	// Create an expense
 	// (POST /expenses/create)
 	PostExpensesCreate(ctx context.Context, request PostExpensesCreateRequestObject) (PostExpensesCreateResponseObject, error)
@@ -1738,6 +2076,113 @@ func (sh *strictHandler) PostAuthRegister(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostAuthRegisterResponseObject); ok {
 		if err := validResponse.VisitPostAuthRegisterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetBudgetHistory operation middleware
+func (sh *strictHandler) GetBudgetHistory(w http.ResponseWriter, r *http.Request, params GetBudgetHistoryParams) {
+	var request GetBudgetHistoryRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBudgetHistory(ctx, request.(GetBudgetHistoryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBudgetHistory")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBudgetHistoryResponseObject); ok {
+		if err := validResponse.VisitGetBudgetHistoryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetBudgetSettings operation middleware
+func (sh *strictHandler) GetBudgetSettings(w http.ResponseWriter, r *http.Request) {
+	var request GetBudgetSettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBudgetSettings(ctx, request.(GetBudgetSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBudgetSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBudgetSettingsResponseObject); ok {
+		if err := validResponse.VisitGetBudgetSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutBudgetSettings operation middleware
+func (sh *strictHandler) PutBudgetSettings(w http.ResponseWriter, r *http.Request) {
+	var request PutBudgetSettingsRequestObject
+
+	var body PutBudgetSettingsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutBudgetSettings(ctx, request.(PutBudgetSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutBudgetSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutBudgetSettingsResponseObject); ok {
+		if err := validResponse.VisitPutBudgetSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetBudgetSummary operation middleware
+func (sh *strictHandler) GetBudgetSummary(w http.ResponseWriter, r *http.Request, params GetBudgetSummaryParams) {
+	var request GetBudgetSummaryRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBudgetSummary(ctx, request.(GetBudgetSummaryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBudgetSummary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBudgetSummaryResponseObject); ok {
+		if err := validResponse.VisitGetBudgetSummaryResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

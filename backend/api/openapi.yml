@@ -387,6 +387,79 @@ paths:
               schema:
                 $ref: "#/components/schemas/BadgeCount"
 
+  /budget/settings:
+    get:
+      summary: Get budget settings
+      responses:
+        "200":
+          description: Budget settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetSettings"
+        "404":
+          description: No budget configured
+    put:
+      summary: Create or update budget settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetSettings"
+      responses:
+        "200":
+          description: Saved budget settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetSettings"
+
+  /budget/summary:
+    get:
+      summary: Get current period budget summary
+      parameters:
+        - name: tz
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Budget summary for the current period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetSummary"
+        "404":
+          description: No active budget configured
+
+  /budget/history:
+    get:
+      summary: Get past period budget summaries
+      parameters:
+        - name: tz
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of past period summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BudgetHistoryEntry"
+        "404":
+          description: No budget configured
+
 components:
   schemas:
     Expense:
@@ -578,3 +651,82 @@ components:
           type: integer
         pendingShares:
           type: integer
+    BudgetSettings:
+      type: object
+      required: [dailyAmount, resetPeriod, weekStartDay, active]
+      properties:
+        dailyAmount:
+          type: integer
+        resetPeriod:
+          type: string
+          enum: [weekly, monthly]
+        weekStartDay:
+          type: integer
+          minimum: 0
+          maximum: 6
+        active:
+          type: boolean
+    BudgetDayBreakdown:
+      type: object
+      required: [date, allowance]
+      properties:
+        date:
+          type: string
+          format: date
+        spent:
+          type: integer
+          nullable: true
+        allowance:
+          type: integer
+    BudgetSummary:
+      type: object
+      required: [periodStart, periodEnd, periodTotal, spentSoFar, spentToday, todayAllowance, remainingToday, remainingPeriod, status, dailyBreakdown]
+      properties:
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        periodTotal:
+          type: integer
+        spentSoFar:
+          type: integer
+        spentToday:
+          type: integer
+        todayAllowance:
+          type: integer
+        remainingToday:
+          type: integer
+        remainingPeriod:
+          type: integer
+        status:
+          type: string
+          enum: [on_track, getting_close, over_today, over_period]
+        dailyBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetDayBreakdown"
+    BudgetHistoryEntry:
+      type: object
+      required: [periodStart, periodEnd, periodTotal, totalSpent, underOver, status, dailyBreakdown]
+      properties:
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        periodTotal:
+          type: integer
+        totalSpent:
+          type: integer
+        underOver:
+          type: integer
+        status:
+          type: string
+          enum: [under_budget, over_budget]
+        dailyBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetDayBreakdown"

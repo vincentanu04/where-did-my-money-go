@@ -22,6 +22,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
 	DeleteExpense(ctx context.Context, arg DeleteExpenseParams) error
 	DeleteFriendship(ctx context.Context, arg DeleteFriendshipParams) error
+	GetBudgetSettings(ctx context.Context, userID uuid.UUID) (BudgetSetting, error)
 	GetExpenseByID(ctx context.Context, id uuid.UUID) (Expense, error)
 	GetExpenseByIDAndUser(ctx context.Context, arg GetExpenseByIDAndUserParams) (Expense, error)
 	GetFriendshipByID(ctx context.Context, id uuid.UUID) (Friendship, error)
@@ -40,6 +41,7 @@ type Querier interface {
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (UpdateExpenseRow, error)
 	UpdateFriendshipStatus(ctx context.Context, arg UpdateFriendshipStatusParams) (Friendship, error)
 	UpdateSharedSplitStatus(ctx context.Context, arg UpdateSharedSplitStatusParams) (SharedExpenseSplit, error)
+	UpsertBudgetSettings(ctx context.Context, arg UpsertBudgetSettingsParams) (BudgetSetting, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -5,6 +5,7 @@ import (
 
 	oapi "github.com/vincentanu04/where-did-my-money-go/generated/server"
 	app_service_auth "github.com/vincentanu04/where-did-my-money-go/internal/app_service/auth"
+	app_service_budget "github.com/vincentanu04/where-did-my-money-go/internal/app_service/budget"
 	app_service_expenses "github.com/vincentanu04/where-did-my-money-go/internal/app_service/expenses"
 	app_service_friends "github.com/vincentanu04/where-did-my-money-go/internal/app_service/friends"
 	app_service_shared "github.com/vincentanu04/where-did-my-money-go/internal/app_service/shared_expenses"
@@ -191,4 +192,24 @@ func (s *Server) PostExpensesSharedShareIdReject(ctx context.Context, request oa
 // (GET /notifications/badge)
 func (s *Server) GetNotificationsBadge(ctx context.Context, request oapi.GetNotificationsBadgeRequestObject) (oapi.GetNotificationsBadgeResponseObject, error) {
 	return app_service_shared.GetNotificationsBadge(ctx, s.deps)
+}
+
+// (GET /budget/settings)
+func (s *Server) GetBudgetSettings(ctx context.Context, request oapi.GetBudgetSettingsRequestObject) (oapi.GetBudgetSettingsResponseObject, error) {
+	return app_service_budget.GetBudgetSettings(ctx, s.deps)
+}
+
+// (PUT /budget/settings)
+func (s *Server) PutBudgetSettings(ctx context.Context, request oapi.PutBudgetSettingsRequestObject) (oapi.PutBudgetSettingsResponseObject, error) {
+	return app_service_budget.PutBudgetSettings(ctx, s.deps, request.Body)
+}
+
+// (GET /budget/summary)
+func (s *Server) GetBudgetSummary(ctx context.Context, request oapi.GetBudgetSummaryRequestObject) (oapi.GetBudgetSummaryResponseObject, error) {
+	return app_service_budget.GetBudgetSummary(ctx, s.deps, request.Params.Tz)
+}
+
+// (GET /budget/history)
+func (s *Server) GetBudgetHistory(ctx context.Context, request oapi.GetBudgetHistoryRequestObject) (oapi.GetBudgetHistoryResponseObject, error) {
+	return app_service_budget.GetBudgetHistory(ctx, s.deps, request.Params.Tz, request.Params.Limit)
 }

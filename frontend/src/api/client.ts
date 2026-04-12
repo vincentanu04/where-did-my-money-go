@@ -212,6 +212,49 @@ const injectedRtkApi = api
         query: () => ({ url: `/notifications/badge` }),
         providesTags: [],
       }),
+      getBudgetSettings: build.query<
+        GetBudgetSettingsApiResponse,
+        GetBudgetSettingsApiArg
+      >({
+        query: () => ({ url: `/budget/settings` }),
+        providesTags: [],
+      }),
+      putBudgetSettings: build.mutation<
+        PutBudgetSettingsApiResponse,
+        PutBudgetSettingsApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/budget/settings`,
+          method: "PUT",
+          body: queryArg.budgetSettings,
+        }),
+        invalidatesTags: [],
+      }),
+      getBudgetSummary: build.query<
+        GetBudgetSummaryApiResponse,
+        GetBudgetSummaryApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/budget/summary`,
+          params: {
+            tz: queryArg.tz,
+          },
+        }),
+        providesTags: [],
+      }),
+      getBudgetHistory: build.query<
+        GetBudgetHistoryApiResponse,
+        GetBudgetHistoryApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/budget/history`,
+          params: {
+            tz: queryArg.tz,
+            limit: queryArg.limit,
+          },
+        }),
+        providesTags: [],
+      }),
     }),
     overrideExisting: false,
   });
@@ -310,6 +353,25 @@ export type PostExpensesSharedByShareIdRejectApiArg = {
 export type GetNotificationsBadgeApiResponse =
   /** status 200 Badge count */ BadgeCount;
 export type GetNotificationsBadgeApiArg = void;
+export type GetBudgetSettingsApiResponse =
+  /** status 200 Budget settings */ BudgetSettings;
+export type GetBudgetSettingsApiArg = void;
+export type PutBudgetSettingsApiResponse =
+  /** status 200 Saved budget settings */ BudgetSettings;
+export type PutBudgetSettingsApiArg = {
+  budgetSettings: BudgetSettings;
+};
+export type GetBudgetSummaryApiResponse =
+  /** status 200 Budget summary for the current period */ BudgetSummary;
+export type GetBudgetSummaryApiArg = {
+  tz: string;
+};
+export type GetBudgetHistoryApiResponse =
+  /** status 200 List of past period summaries */ BudgetHistoryEntry[];
+export type GetBudgetHistoryApiArg = {
+  tz: string;
+  limit?: number;
+};
 export type User = {
   id: string;
   email: string;
@@ -390,6 +452,38 @@ export type BadgeCount = {
   friendRequests: number;
   pendingShares: number;
 };
+export type BudgetSettings = {
+  dailyAmount: number;
+  resetPeriod: "weekly" | "monthly";
+  weekStartDay: number;
+  active: boolean;
+};
+export type BudgetDayBreakdown = {
+  date: string;
+  spent?: number | null;
+  allowance: number;
+};
+export type BudgetSummary = {
+  periodStart: string;
+  periodEnd: string;
+  periodTotal: number;
+  spentSoFar: number;
+  spentToday: number;
+  todayAllowance: number;
+  remainingToday: number;
+  remainingPeriod: number;
+  status: "on_track" | "getting_close" | "over_today" | "over_period";
+  dailyBreakdown: BudgetDayBreakdown[];
+};
+export type BudgetHistoryEntry = {
+  periodStart: string;
+  periodEnd: string;
+  periodTotal: number;
+  totalSpent: number;
+  underOver: number;
+  status: "under_budget" | "over_budget";
+  dailyBreakdown: BudgetDayBreakdown[];
+};
 export const {
   useGetAuthMeQuery,
   usePostAuthRegisterMutation,
@@ -413,4 +507,8 @@ export const {
   usePostExpensesSharedByShareIdAcceptMutation,
   usePostExpensesSharedByShareIdRejectMutation,
   useGetNotificationsBadgeQuery,
+  useGetBudgetSettingsQuery,
+  usePutBudgetSettingsMutation,
+  useGetBudgetSummaryQuery,
+  useGetBudgetHistoryQuery,
 } = injectedRtkApi;
