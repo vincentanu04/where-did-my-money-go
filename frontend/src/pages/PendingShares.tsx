@@ -60,6 +60,11 @@ const PendingShares = () => {
                       of ¥{s.originalTotal.toLocaleString()} total
                     </span>
                   </div>
+                  {s.remark && (
+                    <div className="text-xs text-muted-foreground truncate italic">
+                      "{s.remark}"
+                    </div>
+                  )}
                   <div className="text-xs text-muted-foreground truncate">
                     From {s.sharedByEmail}
                   </div>

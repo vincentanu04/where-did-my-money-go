@@ -101,6 +101,9 @@ export function ShareExpenseDialog({ expense, onClose, onShared }: Props) {
         <div className="text-sm text-muted-foreground mb-2">
           Original amount: <span className="font-medium text-foreground">¥{expense.amount.toLocaleString()}</span>
           {' · '}{expense.category}
+          {expense.remark && (
+            <div className="mt-0.5 italic">"{expense.remark}"</div>
+          )}
         </div>
 
         {loadingFriends ? (

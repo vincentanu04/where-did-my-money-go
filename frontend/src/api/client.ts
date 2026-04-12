@@ -444,6 +444,7 @@ export type PendingShare = {
   splitAmount: number;
   originalTotal: number;
   category: string;
+  remark?: string;
   expenseDate: string;
   sharedByEmail: string;
   sharedById: string;

@@ -635,6 +635,8 @@ components:
           type: integer
         category:
           type: string
+        remark:
+          type: string
         expenseDate:
           type: string
           format: date-time

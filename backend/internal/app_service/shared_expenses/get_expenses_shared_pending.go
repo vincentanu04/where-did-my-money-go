@@ -36,7 +36,7 @@ func GetExpensesSharedPending(ctx context.Context, d deps.Deps) (oapi.GetExpense
 			return nil, err
 		}
 
-		result = append(result, oapi.PendingShare{
+		share := oapi.PendingShare{
 			Id:            s.ID,
 			SplitAmount:   int(s.SplitAmount),
 			OriginalTotal: int(s.OriginalTotal),
@@ -44,7 +44,11 @@ func GetExpensesSharedPending(ctx context.Context, d deps.Deps) (oapi.GetExpense
 			ExpenseDate:   expense.ExpenseDate,
 			SharedByEmail: sharer.Email,
 			SharedById:    s.SharedByUserID,
-		})
+		}
+		if expense.Remark.Valid && expense.Remark.String != "" {
+			share.Remark = &expense.Remark.String
+		}
+		result = append(result, share)
 	}
 
 	return oapi.GetExpensesSharedPending200JSONResponse(result), nil

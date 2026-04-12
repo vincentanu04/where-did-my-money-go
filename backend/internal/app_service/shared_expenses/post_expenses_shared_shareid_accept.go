@@ -31,11 +31,15 @@ func PostExpensesSharedShareIdAccept(ctx context.Context, d deps.Deps, shareID u
 	// Determine category and date from source expense (if still exists)
 	category := "Shared"
 	var expenseDate = split.CreatedAt
+	remark := pgtype.Text{String: "Shared expense", Valid: true}
 	if split.SourceExpenseID.Valid {
 		source, err := d.DB.GetExpenseByID(ctx, split.SourceExpenseID.Bytes)
 		if err == nil {
 			category = source.Category
 			expenseDate = source.ExpenseDate
+			if source.Remark.Valid && source.Remark.String != "" {
+				remark = source.Remark
+			}
 		}
 	}
 
@@ -45,7 +49,7 @@ func PostExpensesSharedShareIdAccept(ctx context.Context, d deps.Deps, shareID u
 		Category:    category,
 		Amount:      split.SplitAmount,
 		ExpenseDate: expenseDate,
-		Remark:      pgtype.Text{String: "Shared expense", Valid: true},
+		Remark:      remark,
 	})
 	if err != nil {
 		return nil, err

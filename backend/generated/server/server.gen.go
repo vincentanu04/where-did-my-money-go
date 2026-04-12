@@ -178,6 +178,7 @@ type PendingShare struct {
 	ExpenseDate   time.Time          `json:"expenseDate"`
 	Id            openapi_types.UUID `json:"id"`
 	OriginalTotal int                `json:"originalTotal"`
+	Remark        *string            `json:"remark,omitempty"`
 	SharedByEmail string             `json:"sharedByEmail"`
 	SharedById    openapi_types.UUID `json:"sharedById"`
 	SplitAmount   int                `json:"splitAmount"`
