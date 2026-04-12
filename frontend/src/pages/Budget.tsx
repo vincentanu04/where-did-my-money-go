@@ -54,7 +54,7 @@ function SettingsTab() {
   const [inputValue, setInputValue] = useState('1500')
   const [resetPeriod, setResetPeriod] = useState<'weekly' | 'monthly'>('weekly')
   const [weekStartDay, setWeekStartDay] = useState(1)
-  const [active, setActive] = useState(true)
+  const [active, setActive] = useState(false)
   const [showSaved, setShowSaved] = useState(false)
 
   useEffect(() => {
