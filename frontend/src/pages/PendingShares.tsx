@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { toast } from 'sonner'
 import {
   useGetExpensesSharedPendingQuery,
@@ -8,13 +9,14 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { Check, X } from 'lucide-react'
+import { Check, CheckCheck, X } from 'lucide-react'
 
 const PendingShares = () => {
   const { data: shares, isLoading, refetch } = useGetExpensesSharedPendingQuery()
   const { refetch: refetchBadge } = useGetNotificationsBadgeQuery()
   const [accept] = usePostExpensesSharedByShareIdAcceptMutation()
   const [reject] = usePostExpensesSharedByShareIdRejectMutation()
+  const [isAcceptingAll, setIsAcceptingAll] = useState(false)
 
   const handleAccept = async (shareId: string) => {
     try {
@@ -37,6 +39,23 @@ const PendingShares = () => {
     }
   }
 
+  const handleAcceptAll = async () => {
+    if (!shares || shares.length === 0) return
+    setIsAcceptingAll(true)
+    try {
+      await Promise.all(shares.map(s => accept({ shareId: s.id }).unwrap()))
+      toast.success(`Accepted ${shares.length} expense${shares.length > 1 ? 's' : ''}`)
+      refetch()
+      refetchBadge()
+    } catch {
+      toast.error('Failed to accept all')
+      refetch()
+      refetchBadge()
+    } finally {
+      setIsAcceptingAll(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
       {isLoading ? (
@@ -48,44 +67,64 @@ const PendingShares = () => {
           </CardContent>
         </Card>
       ) : (
-        shares.map(s => (
-          <Card key={s.id}>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1 min-w-0">
-                  <div className="font-semibold text-sm">{s.category}</div>
-                  <div className="text-base font-medium">
+        <>
+          {shares.length > 1 && (
+            <Button
+              className="w-full h-12 bg-green-600 hover:bg-green-700 text-white text-base"
+              onClick={handleAcceptAll}
+              disabled={isAcceptingAll}
+            >
+              <CheckCheck className="h-4 w-4 mr-2" />
+              {isAcceptingAll ? 'Accepting…' : `Accept All (${shares.length})`}
+            </Button>
+          )}
+          {shares.map(s => (
+            <Card key={s.id}>
+              <CardContent className="pt-4 pb-4 space-y-4">
+                <div className="space-y-1">
+                  <div className="font-semibold">{s.category}</div>
+                  <div className="text-xl font-bold">
                     ¥{s.splitAmount.toLocaleString()}
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
                       of ¥{s.originalTotal.toLocaleString()} total
                     </span>
                   </div>
                   {s.remark && (
-                    <div className="text-xs text-muted-foreground truncate italic">
+                    <div className="text-sm text-muted-foreground italic">
                       "{s.remark}"
                     </div>
                   )}
-                  <div className="text-xs text-muted-foreground truncate">
+                  <div className="text-sm text-muted-foreground">
                     From {s.sharedByEmail}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-sm text-muted-foreground">
                     {new Date(s.expenseDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
                 </div>
-                <div className="flex flex-col gap-1.5 shrink-0">
-                  <Button size="sm" variant="outline" onClick={() => handleAccept(s.id)} className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700">
-                    <Check className="h-3.5 w-3.5 mr-1" />
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="default"
+                    className="h-12 bg-green-600 hover:bg-green-700 text-white text-base"
+                    onClick={() => handleAccept(s.id)}
+                    disabled={isAcceptingAll}
+                  >
+                    <Check className="h-4 w-4 mr-2" />
                     Accept
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleReject(s.id)} className="text-muted-foreground">
-                    <X className="h-3.5 w-3.5 mr-1" />
+                  <Button
+                    variant="outline"
+                    className="h-12 text-base text-destructive border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
+                    onClick={() => handleReject(s.id)}
+                    disabled={isAcceptingAll}
+                  >
+                    <X className="h-4 w-4 mr-2" />
                     Decline
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))
+              </CardContent>
+            </Card>
+          ))}
+        </>
       )}
     </div>
   )
