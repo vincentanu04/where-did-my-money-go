@@ -75,7 +75,9 @@ const PendingShares = () => {
               disabled={isAcceptingAll}
             >
               <CheckCheck className="h-4 w-4 mr-2" />
-              {isAcceptingAll ? 'Accepting…' : `Accept All (${shares.length})`}
+              {isAcceptingAll
+                ? 'Accepting…'
+                : `Accept All (${shares.length}) · ¥${shares.reduce((sum, s) => sum + s.splitAmount, 0).toLocaleString()}`}
             </Button>
           )}
           {shares.map(s => (
