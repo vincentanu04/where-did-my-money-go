@@ -43,7 +43,7 @@ func PostAuthLogin(ctx context.Context, deps deps.Deps, email string, password s
 func createJWT(userID string) (string, error) {
 	claims := jwt.RegisteredClaims{
 		Subject:   userID,
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(168 * time.Hour)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * 365 * 24 * time.Hour)),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
