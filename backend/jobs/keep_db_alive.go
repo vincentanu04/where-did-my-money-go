@@ -9,59 +9,57 @@ import (
 )
 
 // Keeps free-tier Postgres databases alive (e.g. Supabase)
-// - Creates a keepalive table on first run if it doesn't exist
-// - Upserts a heartbeat row each run
-// - Runs once at startup, then once every 5 days
+// - Drops and recreates the keepalive table on startup to ensure correct schema
+// - Inserts a new heartbeat row each run
+// - Prunes rows older than 30 days to keep the table small
+// - Runs once at startup, then once every 24 hours
 // - Stops cleanly on shutdown
 func KeepDBAlive(ctx context.Context, pool *pgxpool.Pool) {
 	ensureTable := func() {
 		ctxQ, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		_, err := pool.Exec(ctxQ, `
-			CREATE TABLE IF NOT EXISTS keepalive (
-				id        INTEGER PRIMARY KEY DEFAULT 1,
-				last_ping TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-				CHECK (id = 1)
+			DROP TABLE IF EXISTS keepalive;
+			CREATE TABLE keepalive (
+				id        BIGSERIAL PRIMARY KEY,
+				pinged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 			)`)
 		if err != nil {
 			log.Printf("[cron] DB keepalive ensure table failed: %v\n", err)
-			return
-		}
-		// Seed the single heartbeat row if it doesn't exist yet
-		_, err = pool.Exec(ctxQ, `
-			INSERT INTO keepalive (id, last_ping) VALUES (1, CURRENT_TIMESTAMP)
-			ON CONFLICT (id) DO NOTHING`)
-		if err != nil {
-			log.Printf("[cron] DB keepalive seed row failed: %v\n", err)
 		}
 	}
 
 	runQuery := func() {
 		ctxQ, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
-		_, err := pool.Exec(ctxQ, `
-			UPDATE keepalive SET last_ping = CURRENT_TIMESTAMP WHERE id = 1`)
+		_, err := pool.Exec(ctxQ, `INSERT INTO keepalive (pinged_at) VALUES (NOW())`)
 		if err != nil {
-			log.Printf("[cron] DB keepalive update failed: %v\n", err)
+			log.Printf("[cron] DB keepalive insert failed: %v\n", err)
+			return
+		}
+		// Prune rows older than 30 days
+		_, err = pool.Exec(ctxQ, `DELETE FROM keepalive WHERE pinged_at < NOW() - INTERVAL '30 days'`)
+		if err != nil {
+			log.Printf("[cron] DB keepalive prune failed: %v\n", err)
 		}
 	}
 
-	// Create the table once before the loop
+	// Recreate the table once before the loop
 	ensureTable()
 
 	go func() {
 		// Run immediately on startup
-		log.Println("[cron] DB keepalive upsert (startup)")
+		log.Println("[cron] DB keepalive insert (startup)")
 		runQuery()
 
-		// Then run every 5 days
-		ticker := time.NewTicker(5 * 24 * time.Hour)
+		// Then run every 24 hours
+		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
 
 		for {
 			select {
 			case <-ticker.C:
-				log.Println("[cron] DB keepalive upsert")
+				log.Println("[cron] DB keepalive insert")
 				runQuery()
 
 			case <-ctx.Done():
